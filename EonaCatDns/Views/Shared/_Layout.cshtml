@@ -1,0 +1,66 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    @using EonaCat.Dns.Managers
+    <!--
+    EonaCatDns
+    Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License
+    -->
+
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>EonaCatDns</title>
+    <script src="/js/jquery.min.js"></script>
+    <link href="/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/css/datatables.min.css" rel="stylesheet"/>
+    <link href="/css/datatables.css" rel="stylesheet"/>
+    <link href="/css/bootstrap_theme.min.css" rel="stylesheet"/>
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/datatables.min.js"></script>
+    <script src="/js/Chart.min.js"></script>
+    <script src="/js/colpick.js"></script>
+    <link href="/css/font-awesome.css" rel="stylesheet"/>
+    <link href="/css/modal.css" rel="stylesheet"/>
+    <link href="/css/main.css" rel="stylesheet"/>
+    <link href="/css/colpick.css" rel="stylesheet"/>
+    <script src="/js/common.js"></script>
+
+    <style>
+        .allowed {
+            background-color: @StatsManagerApi.AllowedBackgroundColor !important;
+        }
+
+        .denied {
+            background-color: @StatsManagerApi.BlockedBackgroundColor !important;
+        }
+    </style>
+</head>
+<body>
+<!-- Wrapper-->
+<div id="wrapper">
+    <!-- Page wrapper -->
+    <div id="page-wrapper">
+        <!-- Main view  -->
+        @RenderBody()
+        <!-- Footer -->
+        <partial name="_Footer"/>
+    </div>
+    <!-- End page wrapper-->
+</div>
+<!-- End wrapper-->
+
+@await RenderSectionAsync("Scripts", false).ConfigureAwait(false)
+</body>
+</html>

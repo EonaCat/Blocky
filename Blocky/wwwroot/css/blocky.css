@@ -1,0 +1,94 @@
+﻿.header {
+    background-color: black;
+    color: white;
+    font-size: 10px;
+    left: 0;
+    padding: 10px;
+    right: 0;
+    text-align: center;
+    top: 0;
+}
+
+.footer {
+    background-color: black;
+    bottom: 0;
+    color: white;
+    font-size: 10px;
+    left: 0;
+    padding: 10px;
+    right: 0;
+    text-align: center;
+}
+
+a {
+    color: #8ebf42;
+}
+
+.center {
+    justify-content: center;
+    text-align: -webkit-center;
+    display: grid;  
+}
+
+.card {
+    background: #222;
+    border: 1px solid #dd2476;
+    color: #fafafa;
+    color: rgba(250, 250, 250, 0.8);
+    margin-bottom: 2rem;
+}
+
+.total {
+    background-color: #015579;
+    color: white;
+}
+
+.blocklist {
+    background-color: #d08b50;
+    color: white;
+}
+
+.allowlist {
+    background-color: #088766;
+    color: white;
+}
+
+.cached {
+    background-color: #6bdd40;
+    color: white;
+}
+
+.blocked {
+    background-color: #870808;
+    color: white;
+}
+
+.hit {
+    background-color: #3e7000;
+    color: white;
+}
+
+.miss {
+    background-color: #878787;
+    color: white;
+}
+
+.clients {
+    background-color: #9639c3;
+    color: white;
+}
+
+.blockyheader {
+    font-weight: bold;
+    text-align: center;
+}
+
+.blockybody {
+    font-weight: bold;
+    text-align: center;
+}
+
+#body {
+    line-height: 0;
+    background-color: #1d1f21
+}

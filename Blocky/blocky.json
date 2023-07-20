@@ -1,0 +1,59 @@
+﻿{
+  "Urls": "http://100.100.100.10:80",
+  "Blocky": {
+    "AutoUpdate": true, /* If enabled the blocklist auto-updates at 4:00 AM */
+    "LoadDefaultSetup": true, /* If enabled the default Blocky Setup blocking list will be downloaded */
+    "ListenV4": "100.100.100.10",
+    "ResolveV4": "100.100.100.10",
+    "RouterDomain": "EonaCatDomain", /* Some urls end in your router's domainName, this will strip them */
+    "LocalV6": "::1",
+    "ResolveV6": "::1",
+    "IsV6enabled": true,
+    "Port": "80",
+    "Scheme": "http",
+    "WebInterface": "100.100.100.10",
+    "WebServerPort": 9999,
+    "RedirectionAddress": "",
+    "DnsPort": 53,
+    "CreateMasterFileOnBoot": true,
+    "HideVersion": false,
+    "IsCacheDisabled": false,
+    "IsMultiCastEnabled": false,
+    "PartialLookupName": false,
+    "LogBlockedClients": true,
+    "StatsRefreshIntervalInSeconds": 10,
+    "ResolveOverDoh": true,
+    "ContinueWhenDohFails": true,
+    "IgnoreWpadRequests": true,
+    "IgnoreArpaRequests": true,
+    "IncludeRawInLogTable": true,
+    "ProgressToConsole": false,
+    "LogInLocalTime": false,
+    "DontCacheList": [
+      "www-www.bing.com.trafficmanager.net"
+    ],
+    "DNSServers": [
+      "8.8.8.8",
+      "8.8.4.4",
+      "8.26.56.26",
+      "84.200.70.40",
+      "209.244.0.4",
+      "208.67.222.222",
+      "64.6.65.6"
+    ],
+    "DNSServersV6": [
+      "fe80::e675:dcff:fea5:3ada%8"
+    ],
+    "DoHServers": [
+      "https://dns.google/dns-query",
+      "https://cloudflare-dns.com/dns-query",
+      "https://dns.quad9.net/dns-query"
+    ],
+    "LogLevel": "DEBUG"
+  },
+  "FileLoggingOptions": {
+    "FileName": "blockyWeb",
+    "FileSizeLimit": 1048576
+  },
+  "AllowedHosts": "*"
+}

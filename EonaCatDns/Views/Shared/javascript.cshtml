@@ -1,0 +1,550 @@
+﻿@model IndexViewModel;
+
+<script>
+    /*
+    EonaCatDns
+    Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License
+     */
+
+    var token = '@Model.Token';
+    var username = '@Model.Username';
+    var statsRefreshInterval = @ConstantsDns.Stats.RefreshInterval;
+    var title = '@ViewData["Title"]';
+    var refreshTimerHandle;
+    var isadmin = false;
+
+    function showadmin()
+    {
+        $(".nav-tabs li").removeClass("active");
+        $(".tab-pane").removeClass("active");
+        loadDashboard();
+    }
+    
+    function showInfo()
+    {
+        hideAlert();
+        document.title = title;
+        $(".nav-tabs li").removeClass("active");
+        $(".tab-pane").removeClass("active");
+        $("#tabDashboardButton").addClass("active");
+        $("#main").show();
+        $("#divDashboard").hide();
+        $("#divInfo").addClass("active");
+        $("#divInfo").show();
+    }
+
+    function loadDashboard() 
+    {
+        showDashboard();
+        refreshDashboard();
+    }
+    
+    function showDashboard()
+    {
+        hideAlert();
+        document.title = title;
+        $(".nav-tabs li").removeClass("active");
+        $(".tab-pane").removeClass("active");
+        $("#tabDashboardButton").addClass("active");
+        $("#divInfo").hide();
+        $("#divInfo").removeClass("active");
+        $("#main").show();
+        $("#divDashboard").show();
+    }
+
+    $(function() 
+    {
+        var headerHtml = $("#header").html();
+        $("#header").html(`<div class="title">
+        <a href="/">
+              <img src="/images/logo.svg" style="width: 30px" alt="EonaCat Logo" />
+        </a>${headerHtml}
+      </div>`);
+
+        $("[name=radioStatsType]").each(function (i) {
+            $(this).change(function () {
+                refreshDashboard();
+            });
+        });
+
+        isadmin = token !== '';
+        if (isadmin) 
+        {
+            $(document).on('click', '.editDomain', function () {
+                var id = $(this).data('id');
+                var route = '@Url.Action("GetById", "Domain")?id=' + id;
+                $('#partial').load(route);
+            });
+
+            showadmin();
+            
+            // Periodically update the chart using the specified interval
+            setInterval(function () {
+                if (!refreshInProgress) {
+                    refreshDashboard(true);
+                }
+            }, statsRefreshInterval * 1000);
+        } else {
+            loadDashboard();
+        }
+    });
+
+    function checkLogin()
+    {
+        username = $("#username").val();
+        password = $("#password").val();
+
+        if (username === null || username === "")
+        {
+            shakeModal("modalLogin", "Please enter your username", "alert-warning")
+            return false;
+        }
+
+        if (password === null || password === "")
+        {
+            shakeModal("modalLogin", "Please enter your password", "alert-warning")
+            return false;
+        }
+
+        return true;
+    }
+
+    function checkPassword() {
+        var divChangePasswordalert = $("#divChangePasswordalert");
+        var oldPassword = $("#txtOldPassword").val();
+        var newPassword = $("#txtChangePasswordNewPassword").val();
+        var confirmPassword = $("#txtChangePasswordConfirmPassword").val();
+
+        if (oldPassword === null || oldPassword === "") {
+            showAlert("warning", "Missing", "Please enter your old password.", divChangePasswordalert);
+            return false;
+        }
+
+        if (newPassword === null || newPassword === "") {
+            showAlert("warning", "Missing", "Please enter a new password.", divChangePasswordalert);
+            return false;
+        }
+
+        if (confirmPassword === null || confirmPassword === "") {
+            showAlert("warning", "Missing", "Please confirm your password.", divChangePasswordalert);
+            return false;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showAlert("warning", "Mismatch", "Passwords do not match. Please try again.", divChangePasswordalert);
+            return false;
+        }
+        return true;
+    }
+
+    const $statIds = ["#totalQueriesStats", "#totalNoErrorStats", "#totalServerFailuresStats", "#totalNameErrorsStats", "#totalRefusedStats", "#totalBlockedStats", "#totalCachedStats", "#totalClientsStats"];
+    const $percentageIds = ["#totalQueriesStatsPercentage", "#totalNoErrorStatsPercentage", "#totalServerFailuresStatsPercentage", "#totalNameErrorsStatsPercentage", "#totalRefusedStatsPercentage", "#totalBlockedStatsPercentage", "#totalCachedStatsPercentage"];
+    const divDashboardSpinner = $("#divDashboardSpinner");
+    const divDashboard = $("#divDashboard");
+    var refreshInProgress = false;
+
+    async function refreshDashboard(hideLoader = null) 
+    {
+          if (refreshInProgress) {
+            // A refresh is already in progress, so skip this call
+            return;
+        }
+
+        if (!hideLoader) {
+            divDashboard.hide();
+            divDashboardSpinner.show();
+        }
+        else
+        {
+            divDashboardSpinner.hide();
+        }
+
+        refreshInProgress = true;
+
+        const type = $("input[name=radioStatsType]:checked").val();
+
+        await HTTPRequest({
+            url: `/api/stats?token=${token}&type=${type}`,
+            async: true,
+            loader: divDashboardSpinner,
+            alert: hideLoader,
+            success: function (responseJSON) {
+                const result = responseJSON.response;
+                const stats = result.stats;
+                if (stats == null)
+                {
+                    return;
+                }
+                const keys = Object.keys(stats);
+                const totalQueries = stats.totalQueries;
+
+                $statIds.forEach((id, i) => {
+                    $(id).text(stats[keys[i]].toLocaleString());
+                });
+
+                if (totalQueries > 0) {
+                    $percentageIds.forEach((id, i) => {
+                        const percentage = (stats[keys[i]] * 100 / totalQueries).toFixed(2);
+                        $(id).text(`${percentage}%`);
+                    });
+                } else {
+                    $percentageIds.forEach(id => {
+                        $(id).text("0%");
+                    });
+                }
+
+                UpdateCharts(result);
+
+                if (!hideLoader) {
+                    divDashboardSpinner.hide();
+                }
+
+                if (!$("#tabDashboardButton").hasClass("active")) {
+                    return;
+                }
+
+                if ($("#divInfo").hasClass("active")) {
+                    return;
+                }
+
+                divDashboard.show();
+            },
+            error: function () {
+                if (!hideLoader) {
+                    divDashboardSpinner.hide();
+                    divDashboard.show();
+                }
+            },
+            invalidToken: function () {
+                loadDashboard();
+            }
+        });
+        refreshInProgress = false;
+        return false;
+    }
+
+    function UpdateCharts(result) {
+        // stats chart
+        if (window.chartDashboardMain == null) 
+        {
+            var canvasStats = document.getElementById("stats").getContext("2d");
+            window.chartDashboardMain = new Chart(canvasStats, {
+                type: "line",
+                data: result.statisticsData,
+                options: {
+                    //responsive: false,
+                    //maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            tension: 0.1
+                        }
+                    },
+                }
+            });
+        } else {
+            window.chartDashboardMain.data = result.statisticsData;
+            window.chartDashboardMain.update();
+        }
+        
+        if (!isadmin || result.queryTypeChartData.labels.length == 0) {
+            $('.topList').hide();
+        }
+        else
+        {
+            $('.topList').show();
+
+            // query type chart
+            if (window.chartqueryDonut == null) {
+                var contextqueryDonut = document.getElementById("queryDonut").getContext("2d");
+                window.chartqueryDonut = new Chart(contextqueryDonut, 
+                {
+                    type: "doughnut",
+                    data: result.queryTypeChartData,
+                        options: 
+                        {
+                            cutoutPercentage: 80,
+                            aspectRatio: 1,
+                        }
+                });
+            } else {
+                window.chartqueryDonut.data = result.queryTypeChartData;
+                window.chartqueryDonut.update();
+            }
+        }
+        
+        setTimeout(function () { createTable("topBlocked", result.topBlocked) }, 100);
+        setTimeout(function () { createTable("topClients", result.topClients) }, 100);
+        setTimeout(function () { createTable("topDomains", result.topDomains) }, 100);
+        setTimeout(function () { createTable("lastQueries", result.lastQueries) }, 100);
+    }
+    
+    function allowedButton(id)
+    {
+        var button = '<a href="#" title="Add to the allowList" onclick = "return allowDomain(' + id +');"> Allow</a>';
+        return button;
+    }
+    
+    function allowDomain(id) {
+        HTTPRequest({
+            url: "/api/allowDomain?token=" + token + "&id=" + id,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function allowClientButton(name) {
+        var button = '<a href="#" title="Allow the client" onclick = "return allowClient(\'' + name + '\');"> Allow</a>';
+        return button;
+    }
+
+    function blockClientButton(name) {
+        var button = '<a href="#" title="Block the client" onclick = "return blockClient(\'' + name + '\');"> Block</a>';
+        return button;
+    }
+
+
+    function allowButton(id) {
+        var button = '<a href="#" title="Add to the allowList" onclick = "return allowDomain(' + id + ');"> Allow</a>';
+        return button;
+    }
+
+    function blockedButton(id) {
+        var button = '<a href="#" title="Add to the blockList" onclick = "return blockDomain(' + id + ');"> Block</a>';
+        return button;
+    }
+
+    function defaultButton(id) {
+        var button = '<a href="#" title="Add to the default List" onclick = "return defaultDomain(' + id + ');"> Default</a>';
+        return button;
+    }
+    
+    function defaultDomain(id) {
+        HTTPRequest({
+            url: "/api/defaultDomain?token=" + token + "&id=" + id,
+            async: true,
+            success: function (responseJSON) {
+                location.reload(); 
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+    
+    function allowClient(name) {
+        HTTPRequest({
+            url: "/api/allowClient?token=" + token + "&name=" + name,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+    
+    function blockClient(name) {
+        HTTPRequest({
+            url: "/api/blockClient?token=" + token + "&name=" + name,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+
+    function blockDomain(id) {
+        HTTPRequest({
+            url: "/api/blockDomain?token=" + token + "&id=" + id,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function createTable(tableId, data) {
+        const $table = $("#" + tableId);
+        let tableHtml = "";
+
+        if (!data || data.length === 0) {
+            tableHtml = "<thead><tr>&nbsp;</tr></thead><tbody>";
+            tableHtml += "<tr><td>No Data</td><td></td></tr>";
+        } else {
+            const isTopDomains = tableId === "topDomains" || tableId === "topBlocked" || tableId === "lastQueries";
+            const isTopClients = tableId === "topClients";
+
+            tableHtml = "<thead><tr><th>Name</th><th>&nbsp;</th></tr></thead><tbody>";
+
+            for (let i = 0; i < data.length; i++) {
+                const { id, name, isBlocked, alias } = data[i];
+                const blockedClass = isBlocked ? "denied" : "allowed";
+
+                let nameHtml = name;
+                let buttonHtml = "";
+
+                if (isTopDomains && id) {
+                    nameHtml = `<a href='/Domain/Index' class='editDomain' data-bs-toggle="modal" data-bs-target="#EonaCatModal" data-id='${id}'>${name}</a>`;
+                    buttonHtml = isBlocked ? `${allowButton(id)} ${defaultButton(id)}` : blockedButton(id);
+                }
+
+                if (isTopClients && name) {
+                    buttonHtml = isBlocked ? allowClientButton(name) : blockClientButton(name);
+                }
+
+                tableHtml += `<tr class='${blockedClass}'${isTopClients ? ` title='${alias}'` : ""}>
+                    <td>${nameHtml}</td>
+                    <td${isTopDomains ? " style='width:30%'" : ""}>${buttonHtml}</td>
+                </tr>`;
+            }
+        }
+
+        tableHtml += "</tbody>";
+        $table.html(tableHtml);
+    }
+
+    function refreshLogFilesList() {
+        const lstLogFiles = $("#lstLogFiles");
+
+        HTTPRequest({
+            url: `/api/logs?token=${token}`,
+            async: true,
+            success: function (responseJSON) {
+                const logFiles = responseJSON.response.logFiles;
+
+                const list = logFiles.map(function (logFile) {
+                    return `<div class="log"><a href="#" onclick="return viewLog('${logFile.fileName}');">${logFile.fileName} [${logFile.size}]</a></div>`;
+                }).join('');
+
+                lstLogFiles.html(list);
+            },
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+            loader: lstLogFiles
+        });
+
+        return false;
+    }
+
+    function logout()
+    {
+        HTTPRequest({
+            url: "/index/logout",
+        });        
+    }
+
+    function viewLog(logFile) {
+        const logPanel = $("#logPanel");
+        const txtLogPanelTitle = $("#txtLogPanelTitle");
+        const spinner = $("#spinner");
+        const logPanelBody = $("#logPanelBody");
+
+        txtLogPanelTitle.text(logFile);
+
+        logPanelBody.hide();
+        spinner.show();
+        logPanel.show();
+
+        const url = `/api/viewLog?token=${token}&log=${logFile}`;
+
+        HTTPGetFileRequest({
+            url,
+            async: true,
+            success: function (response) {
+                spinner.hide();
+                logPanelBody.text(response.split('\n').reverse().join('\n'));
+                logPanelBody.show();
+            },
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+            loader: spinner
+        });
+
+        return false;
+    }
+
+    function downloadLog() {
+        const logFile = $("#txtLogPanelTitle").text();
+        window.open(`/api/viewLog?token=${token}&log=${logFile}`, "_blank");
+        return false;
+    }
+
+    function deleteLog() {
+        const logFile = $("#txtLogPanelTitle").text();
+
+        if (!confirm(`Are you sure you want to permanently delete the log file '${logFile}'?`)) {
+            return false;
+        }
+
+        const btn = $("#btnDeleteLog").button("loading");
+
+        HTTPRequest({
+            url: `/api/deleteLog?token=${token}&log=${logFile}`,
+            async: true,
+            success: function (responseJSON) {
+                refreshLogFilesList();
+                $("#logPanel").hide();
+                btn.button("reset");
+                showAlert("success", "Log Deleted!", "Log file was deleted successfully.");
+            },
+            error: function () {
+                btn.button("reset");
+            },
+            invalidToken: function () {
+                btn.button("reset");
+                loadDashboard();
+            }
+        });
+
+        return false;
+    }
+</script>

@@ -1,0 +1,122 @@
+﻿@model IndexViewModel
+@{
+    Layout = null;
+}
+
+<div class="modal login in" id="modalLogin" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog login animated">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-bs-dismiss="modal" aria-hidden="true">×</button>
+                <h4 class="modal-title">Login</h4>
+            </div>
+            <div class="modal-body">
+                <div class="box">
+                    <div class="content">
+                        <div class="logo">
+                            <img src="~/images/logo.svg" style="width: 30px" alt="EonaCatLogo" />
+                        </div>
+                        <div class="error"></div>
+                        <div class="form loginBox">
+                            @using (Html.BeginForm("login", "index", FormMethod.Post, new { @class = "form-horizontal", id = "login-form" }))
+                            {
+                                @Html.TextBoxFor(x => x.Username, new { id = "username", @class = "form-control", placeholder = "username" })
+                                @Html.TextBoxFor(x => x.Password, new { id = "password", @class = "form-control", placeholder = "password", type = "password", autocomplete = "on" })
+                                <input class="btn btn-default btn-login" type="submit" value="Login">
+                            }
+                        </div>
+
+                        <div class="hintBox">
+                            Default username: EonaCat <br/>
+                            Default password: admin
+                        </div>
+                    </div>
+                </div>
+                <div class="box">
+                    <div class="content registerBox" style="display: none;">
+                        <div class="form">
+                            @using (Html.BeginForm("register", "index", FormMethod.Post, new { @class = "form-horizontal", id = "register-form" }))
+                            {
+                                <input id="register_username" class="form-control" type="text" placeholder="Username">
+                                <input id="register_password" class="form-control" type="password" placeholder="Password" autocomplete="off">
+                                <input id="register_password_confirmation" class="form-control" type="password" placeholder="Repeat Password" autocomplete="off">
+                                <input class="btn btn-default btn-register" type="button" value="Create account" name="commit">
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="forgot login-footer">
+                    <span>
+                        Looking to
+                        <a href="javascript: showRegisterForm();">create an account</a>
+                        ?
+                    </span>
+                </div>
+                <div class="forgot register-footer" style="display: none">
+                    <span>already have an account?</span>
+                    <a href="javascript: showLoginForm();">Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $('#login-form').submit(function () {
+        return checkLogin();
+    });
+
+    function showRegisterForm() {
+        return alert('User account creation disabled');
+        $('.loginBox').fadeOut('fast', function () {
+            $('.registerBox').fadeIn('fast');
+            $('.login-footer').fadeOut('fast', function () {
+                $('.register-footer').fadeIn('fast');
+            });
+
+            $('.modal-title').html('Register');
+            $('#register_username').focus();
+        });
+        $('.error').removeClass('alert alert-danger').html('');
+
+    }
+    function showLoginForm()
+    {
+        $('#modalLogin .registerBox').fadeOut('fast', function () {
+            $('.loginBox').fadeIn('fast');
+            $('.register-footer').fadeOut('fast', function () {
+                $('.login-footer').fadeIn('fast');
+            });
+
+            $('.modal-title').html('Login');
+            $('#username').focus();
+        });
+        $('.error').removeClass('alert alert-danger').html('');
+    }
+
+    function openLoginModal() {
+        showLoginForm();
+        setTimeout(function () {
+            $('#modalLogin').modal('show');
+        }, 230);
+
+    }
+    function openRegisterModal() {
+        showRegisterForm();
+        setTimeout(function () {
+            $('#modalLogin').modal('show');
+        }, 230);
+
+    }
+
+    function shakeModal(modalId, message, alertClass = "alert-danger") {
+        $('#' + modalId + ' .modal-dialog').addClass('shake');
+        $('.error').addClass('alert ' + alertClass).html(message);
+        $('input[type="password"]').val('');
+        setTimeout(function () {
+            $('#' + modalId + ' .modal-dialog').removeClass('shake');
+        }, 1000);
+    }
+</script>

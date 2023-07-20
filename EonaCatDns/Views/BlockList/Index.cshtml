@@ -1,0 +1,188 @@
+﻿<!--
+EonaCatDns
+Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License
+-->
+<div id="mainContainer">
+    <div class="row">
+        <div class="col-md-12">
+            <table id="blockListTable" class="table table-bordered table-hover" style="width: 100%">
+                <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Enabled</th>
+                    <th>Last result</th>
+                    <th>Last updated</th>
+                    <th>Last updated startTime</th>
+                    <th>Creation date</th>
+                    <th>Total entries</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>
+                        <button type="button" class="addBlockList btn btn-primary btn-sm fa fa-plus" style="float: right;" data-bs-toggle="modal" data-bs-target="#EonaCatModal"></button>
+                    </th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function ()
+    {
+        const blockListTable = $('#blockListTable');
+        var datatablesOptions = {
+            "serverSide": true,
+            "ajaxSource": '/BlockList/GetList',
+            "serverMethod": "GET",
+            "bautoWidth": false,
+            destroy: true,
+            order: [[0, 'desc']],
+            columns: [
+                { 'data': 'Id' },
+                { 'data': 'Name' },
+                { 'data': 'IsEnabled' },
+                { 'data': 'LastResult' },
+                { 'data': 'LastUpdated' },
+                { 'data': 'LastUpdateStartTime' },
+                { 'data': 'CreationDate' },
+                { 'data': 'TotalEntries' },
+                {
+                    mRender: function (data, type, row) {
+                        var linkUpdate = '';
+                        var formGroupStart = '<div class="form-group">';
+                        var formGroupEnd = '</div>';
+                        var confirmMessage = 'Are you sure you want to update this blockList?';
+
+                        if (row.IsUpdating) {
+                            linkUpdate = `${formGroupStart}<div id="statusIcon${row.Id}"></div><div id="progress${row.Id}"></div>${formGroupEnd}`;
+                            fetchProgress(row.Id, row.Url);
+                        } else {
+                            linkUpdate = `${formGroupStart}<form action="/BlockList/UpdateList" method="post">
+                <input type="hidden" id="id" name="id" value="${row.Id}">
+                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('${confirmMessage}')">
+                    <i class="fas fa-undo"></i>
+                </button>
+            </form>${formGroupEnd}`;
+                        }
+
+                        return linkUpdate;
+                    },
+                    'sWidth': '50px'
+                },
+                {
+                    mRender: function (data, type, row) {
+                        return `<div class="form-group">
+                            <input type="hidden" id="id" name="id" value="${row.Id}">
+                            <button type="button" class="editBlockList btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#EonaCatModal" data-id="${row.Id}">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                          </div>`;
+                    },
+                    'sWidth': '50px'
+                },
+                {
+                    mRender: function (data, type, row) {
+                        return `<div class="form-group">
+                <form action="/BlockList/Delete" method="post">
+                  <input type="hidden" name="id" value="${row.Id}">
+                  <button type="submit" class="btn btn-danger btn-sm delete-blocklist" data-confirm="Are you sure you want to delete this blockList?">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </div>`;
+                    },
+                    'sWidth': '50px'
+                }
+            ]
+        };
+
+        // Initialize DataTable
+        blockListTable.dataTable(datatablesOptions);
+
+        // Event delegation for the delete button
+        blockListTable.on('click', '.delete-blocklist', function (e) {
+            e.preventDefault();
+            const confirmMessage = $(this).data('confirm');
+            if (confirm(confirmMessage)) {
+                // Submit the delete form
+                $(this).closest('form').submit();
+            }
+        });
+
+        // Edit button click event
+        $(document).on('click', '.editBlockList', function () {
+            const id = $(this).data('id');
+            const route = '@Url.Action("GetById", "BlockList")?id=' + id;
+            $('#partial').load(route);
+        });
+
+
+        // Add button click event
+        $('.addBlockList').on('click', function () {
+            const route = '@Url.Action("GetById", "BlockList")?id=0';
+            $('#partial').load(route);
+        });
+
+        // Function to fetch progress
+        function fetchProgress(id, url) {
+            fetch(`/api/blocklistProgress?token=${token}&url=${url}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data) {
+                        $('#progress' + id).html('Error');
+                        $('#statusIcon' + id).html('');
+                        return;
+                    }
+
+                    if (data.total > 0 && data.progress < 100) {
+                        $('#progress' + id).html(`Updating: <small>(${data.current}/${data.total}) (${data.progress}%)</small>`);
+                        $('#statusIcon' + id).html('<i class="fas fa-undo rotatingleft"></i>');
+                    }
+
+                    if (data.status === 'Completed') {
+                        $('#progress' + id).html('Completed');
+                        $('#statusIcon' + id).html('');
+                    }
+
+                    if (!data.total || data.total === 0 || (data.status !== 'Completed' && data.status !== '')) {
+                        setTimeout(() => fetchProgress(id, url), 5000); // Use arrow function for better performance
+                    }
+
+                    if (data.progress === 100) {
+                        if (data.status === 'Completed' || data.status === '') {
+                            $('#progress' + id).html('Completed');
+                            $('#statusIcon' + id).html('');
+                        } else {
+                            $('#progress' + id).html(`Status: ${data.status}`);
+                            $('#statusIcon' + id).html('<i class="fas fa-undo rotatingleft"></i>');
+                        }
+                    }
+                });
+        }
+
+        // Fetch progress for rows with IsUpdating flag
+        blockListTable.find('tbody tr').each(function () {
+            const row = $(this);
+            const isUpdating = row.find('.editBlockList').length === 0; // Check for IsUpdating based on available buttons
+            if (isUpdating) {
+                const id = row.find('input[name="id"]').val();
+                const url = row.find('.editBlockList').data('id');
+                fetchProgress(id, url);
+            }
+        });
+    });
+</script>

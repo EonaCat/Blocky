@@ -1,0 +1,28 @@
+﻿@model IndexViewModel;
+
+<div class="well well-sm log-list-pane">
+    <div id="lstLogFiles" class="logs">
+        <div class="log">
+            &nbsp;
+        </div>
+    </div>
+</div>
+
+<div id="logPanel" class="log-viewer-pane">
+    <div class="panel panel-default">
+        <div class="panel-heading" style="height: 36px; padding: 4px 6px;">
+            <div id="txtLogPanelTitle" style="float: left; padding: 4px;">
+                &nbsp;
+            </div>
+            <div style="float: right;">
+                <button type="button" class="btn btn-default" data-loading-text="Download" onclick="return downloadLog();" style="font-size: 12px; padding: 4px 6px;">Download</button>
+                <button id="btnDeleteLog" type="button" class="btn btn-danger" data-loading-text="Delete" onclick="return deleteLog();" style="font-size: 12px; padding: 4px 6px;">Delete</button>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div id="spinner" style="height: 400px; margin-top: 20px;"></div>
+            <pre id="logPanelBody" style="max-height: 500px; max-width: 100%; word-break: normal; word-wrap: normal;"></pre>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,356 @@
+﻿/*
+EonaCatDns
+Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License
+
+*/
+
+html, body {
+    background-color: #000000;
+    height: 100% !important;
+}
+
+.EonaCatModal {
+    width: fit-content;
+}
+
+body {
+    line-height: 1.42857143 !important;
+    margin: 0px !important;
+}
+
+.nav-tabs {
+    border-bottom: 0px solid transparent !important;
+}
+
+a {
+    color: #6699ff !important;
+}
+
+    a:hover {
+        color: #6699ff !important;
+    }
+
+#header {
+    background-color: #000000;
+    height: 32px;
+    margin-bottom: -32px;
+    width: 100%;
+}
+
+    #header .title {
+        color: #ffffff;
+        margin: 0 auto;
+        padding-left: 50%;
+        padding-right: 1%;
+    }
+
+        #header .title img {
+            vertical-align: text-bottom;
+        }
+
+        #header .title .text {
+            font-family: Arial;
+            font-size: 24px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+    #header .menu {
+        float: right;
+        padding: 6px;
+    }
+
+        #header .menu .menu-title {
+            margin-right: 20px;
+            color: #ffffff;
+            font-family: Arial;
+            font-size: 16px;
+        }
+
+.table {
+    --bs-table-color: unset !important;
+}
+
+@-webkit-keyframes rotating {
+    from {
+        -webkit-transform: rotate(0deg);
+    }
+
+    to {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+@-webkit-keyframes rotatingleft {
+    from {
+        -webkit-transform: rotate(360deg);
+    }
+
+    to {
+        -webkit-transform: rotate(0deg);
+    }
+}
+
+.rotating {
+    -webkit-animation: rotating 2s linear infinite;
+}
+
+.rotatingleft {
+    -webkit-animation: rotatingleft 2s linear infinite;
+}
+
+#content {
+    min-height: 100%;
+}
+
+::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+    border-radius: 10px;
+    background-color: #2E3338;
+}
+
+::-webkit-scrollbar {
+    width: 12px;
+    background-color: #2E3338;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+    background-color: #555;
+}
+
+.close {
+    position: absolute;
+    right: 20px;
+    top: 10px;
+    color: black;
+}
+
+.topQuery {
+    width: 100%;
+}
+
+.topClients {
+    width: 100%;
+}
+
+.topList {
+    margin-top: 50px;
+}
+
+.topDomains {
+    width: 100%;
+}
+
+.latestQueries {
+    width: 100%;
+}
+
+.topBlockedDomains {
+    width: 100%;
+}
+
+.container {
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    height: 100%;
+    padding: 55px 15px 60px 15px;
+    word-wrap: break-word;
+}
+
+    .container .login {
+        display: none;
+        margin: auto;
+        padding: 150px 0 0 0;
+        width: 500px;
+    }
+
+    .container .page {
+        display: none;
+    }
+
+.auto-resize-img {
+    display: block;
+    height: auto;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+}
+
+.card {
+    background: #222;
+    border: 1px solid #dd2476;
+    color: rgba(250, 250, 250, 0.8);
+    margin-bottom: 2rem;
+}
+
+.card-body {
+    padding: 0px;
+}
+
+.center {
+    justify-content: center;
+    text-align: -webkit-center;
+    display: grid;
+}
+
+.center-iframe {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-height: 480px;
+    max-width: 640px;
+}
+
+    .center-iframe iframe {
+        height: 100%;
+        width: 100%;
+    }
+
+#footer {
+    margin-top: -20px;
+}
+
+    #footer .content {
+        color: rgb(119, 119, 119);
+        font-family: Arial, sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+        #footer .content a {
+            color: rgb(119, 119, 119);
+            text-decoration: none;
+        }
+
+            #footer .content a:hover {
+                color: #6699ff;
+            }
+
+.form-inline .form-group {
+    margin-bottom: 10px;
+    margin-right: 10px;
+}
+
+label {
+    margin-right: 4px;
+}
+
+.panel-body {
+    -moz-hyphens: auto;
+    -ms-hyphens: auto;
+    -ms-word-break: break-all;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    word-break: break-word;
+    word-wrap: break-word;
+}
+
+.EonaCatAlert {
+    position: fixed;
+    top: 40px;
+    right: 0;
+    left: 0;
+    margin: 0 auto;
+    z-index: 9999;
+    width: 250px;
+}
+
+.EonaCatAlert .alert {
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    color: #fff;
+    font-weight: bold;
+}
+
+.EonaCatAlert .alert-success {
+    background-color: #28a745;
+}
+
+.EonaCatAlert .alert-danger {
+    background-color: #dc3545;
+}
+
+.EonaCatAlert .close {
+    color: #fff;
+    opacity: 0.8;
+}
+
+.EonaCatAlert .progress {
+    height: 5px;
+    margin-top: 5px;
+}
+
+.EonaCatAlert .progress-bar {
+    transition: width 0.5s ease-in-out;
+}
+
+.log-list-pane {
+    float: left;
+    width: 15%;
+}
+
+.logs {
+    font-size: 12px;
+}
+
+    .logs .log {
+        padding: 2px;
+    }
+
+.log-viewer-pane {
+    display: none;
+    float: right;
+    width: 84%;
+}
+
+.statsMenu {
+    margin: 0 auto;
+    padding: 10px 0 10px 0;
+}
+
+    .statsMenu .stats-item {
+        float: left;
+        border: black;
+        padding: 2px;
+        width: 15%;
+        box-shadow: 0 4px 8px 0 rgba(236 199 22,0.6);
+        transition: 0.3s;
+        border-radius: 50px;
+        text-align: center;
+        margin: 5px;
+    }
+
+        .statsMenu .stats-item .number {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .statsMenu .stats-item .percentage {
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .statsMenu .stats-item .title {
+            font-size: 12px;
+            font-weight: bold;
+        }

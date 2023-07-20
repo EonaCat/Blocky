@@ -1,0 +1,293 @@
+﻿    <!--
+    EonaCatDns
+    Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License
+-->
+@using EonaCat.Dns.Managers
+@model IndexViewModel;
+
+    <style>
+
+        .statsMenu .total-queries {
+            background-color: @StatsManagerApi.TotalQueriesBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .no-error {
+            background-color: @StatsManagerApi.NoErrorBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .server-failure {
+            background-color: @StatsManagerApi.ServerFailureBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .name-error {
+            background-color: @StatsManagerApi.NameErrorBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .refused {
+            background-color: @StatsManagerApi.RefusedBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .blocked {
+            background-color: @StatsManagerApi.BlockedBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .cached {
+            background-color: @StatsManagerApi.CachedBackgroundColor;
+            color: #ffffff;
+        }
+
+        .statsMenu .clients {
+            background-color: @StatsManagerApi.ClientsBackgroundColor;
+            color: #ffffff;
+        }
+    </style>
+
+<div id="divDashboardSpinner" style="height: 400px; width: 100%; margin-top: 10px;"></div>
+
+@{
+    if (Model.IsLoggedIn)
+    {
+        <ul class="nav nav-tabs">
+            <li id="board" class="nav-item">
+                <a href="#switchDashboardButton" class="active" data-bs-toggle="tab" onclick="return showDashboard();">Dashboard</a>
+            </li>
+            <li id="board" class="nav-item">
+                <a href="#switchInfoButton" class="active" data-bs-toggle="tab" onclick="return showInfo();">Info</a>
+            </li>
+        </ul>
+
+        <div id="divInfo" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="latestQueries panel panel-default col-2" style="height: 400px; overflow: auto">
+                        <div class="panel-heading">Latest Queries</div>
+                        <table class="table table-hover" id="lastQueries">
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th>&nbsp;</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>EonaCat.com</td>
+                                    <td>100</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="topClients panel panel-default col-2" style="height: 400px; overflow: auto">
+                        <div class="panel-heading">Top Clients</div>
+                        <table class="table table-hover" id="topClients">
+                            <thead>
+                                <tr>
+                                    <th>Client</th>
+                                    <th>Queries</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>127.0.0.1</td>
+                                    <td>100</td>
+                                </tr>
+                                <tr>
+                                    <td>::1</td>
+                                    <td>100</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="topQuery panel panel-default" style="height: 400px; overflow: auto">
+                        <div class="panel-heading">Top Query Types</div>
+                        <div class="panel-body" style="margin-left: 10%;">
+                            <canvas id="queryDonut" style="height: 320px; width: 320px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="topBlockedDomains panel panel-default col-2" style="height: 400px; overflow: auto">
+                        <div class="panel-heading">Top Blocked Domains</div>
+                        <table class="table table-hover" id="topBlocked">
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th>&nbsp;</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Blocked.EonaCat.com</td>
+                                    <td>&nbsp;</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="topDomains panel panel-default col-2" style="height: 400px; overflow: auto">
+                        <div class="panel-heading">Top Domains</div>
+                        <table class="table table-hover" id="topDomains">
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th>&nbsp;</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>EonaCat.com</td>
+                                    <td>100</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<div id="divDashboard" style="display: none;">
+    <div class="btn-group" data-bs-toggle="buttons">
+        <label class="btn btn-default">
+            <input type="radio" name="radioStatsType" value="lastHour" checked> Hour
+        </label>
+        <label class="btn btn-default">
+            <input type="radio" name="radioStatsType" value="lastDay"> Day
+        </label>
+        <label class="btn btn-default">
+            <input type="radio" name="radioStatsType" value="lastWeek"> Week
+        </label>
+
+        @{
+            if (Model.IsLoggedIn)
+            {
+                <label class="btn btn-default">
+                    <input type="radio" name="radioStatsType" value="lastMonth"> Month
+                </label>
+                <label class="btn btn-default">
+                    <input type="radio" name="radioStatsType" value="lastYear"> Year
+                </label>
+            }
+        }
+    </div>
+    <div class="container">
+        <div class="row statsMenu">
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card total-queries">
+                    <div class="card-body">
+                        <h5 class="card-title title">Total Queries:</h5>
+                        <div id="totalQueriesStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalQueriesStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card no-error">
+                    <div class="card-body">
+                        <h5 class="card-title title">No Error:</h5>
+                        <div id="totalNoErrorStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalNoErrorStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card cached">
+                    <div class="card-body">
+                        <h5 class="card-title title">Cached:</h5>
+                        <div id="totalCachedStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalCachedStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card server-failure">
+                    <div class="card-body">
+                        <h5 class="card-title title">Server Failure:</h5>
+                        <div id="totalServerFailuresStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalServerFailuresStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card name-error">
+                    <div class="card-body">
+                        <h5 class="card-title title">Name Error:</h5>
+                        <div id="totalNameErrorsStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalNameErrorsStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card refused">
+                    <div class="card-body">
+                        <h5 class="card-title title">Refused:</h5>
+                        <div id="totalRefusedStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalRefusedStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card blocked">
+                    <div class="card-body">
+                        <h5 class="card-title title">Blocked:</h5>
+                        <div id="totalBlockedStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalBlockedStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
+                <div class="card clients">
+                    <div class="card-body">
+                        <h5 class="card-title title">Clients:</h5>
+                        <div id="totalClientsStatsPercentage" class="card-subtitle percentage">0%</div>
+                        <p class="card-text">
+                            <div id="totalClientsStats" class="number">100</div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <canvas id="stats" style="height:200px"></canvas>
+</div>

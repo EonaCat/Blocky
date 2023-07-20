@@ -1,0 +1,76 @@
+﻿@model BlockListViewModel;
+
+<script>
+
+$(function ()
+{
+    $(".btn-group > .btn").click(function () 
+    {
+        $(".btn-group > .btn").removeClass("active");
+        $(this).addClass("active");
+    });
+
+        $('#blockListForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Update", "BlockList")',
+                data: $(this).serialize(),
+                success: function (result) 
+                {                    
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#blockListTable').DataTable();
+                    table.ajax.reload();
+                },
+                error: function () {                    
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#blockListTable').DataTable();
+                    table.ajax.reload();
+                }
+            });
+        });
+
+});
+
+</script>
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "blockListForm" }))
+{
+    <div class="form-group">
+        <label for="ID">ID</label>
+        @Html.TextBoxFor(x => x.Id, new { @class = "form-control", disabled = "disabled" })
+        @Html.Hidden("Id")
+    </div>
+
+    <div class="form-group">
+        <label for="Name">Name</label>
+        @Html.TextBoxFor(x => x.Name, new { id = "Name", @class = "form-control", placeholder = "Name" })
+    </div>
+
+    <div class="form-group">
+        <label for="Url">Url</label>
+        @Html.TextBoxFor(x => x.Url, new { id = "Url", @class = "form-control", placeholder = "Url" })
+    </div>
+
+    <div class="form-group">
+
+        Enabled&nbsp;
+        <div class="btn-group" data-bs-toggle="buttons">
+            @{
+                var isEnabled = Model.IsEnabled ? "active" : "";
+                var isDisabled = !Model.IsEnabled ? "active" : "";
+            }
+            <label class="btn btn-primary @isEnabled">
+                @Html.RadioButtonFor(e => e.IsEnabled, true, new { id = "isEnabled-true" })
+                @Html.Label("isEnabled-true", "Yes")
+            </label>
+
+            <label class="btn btn-primary @isDisabled">
+                @Html.RadioButtonFor(e => e.IsEnabled, false, new { id = "isDisabled-false" })
+                @Html.Label("isDisabled-false", "No")
+            </label>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save changes</button>
+}

@@ -1,0 +1,221 @@
+﻿/*  Shake animation  */
+
+@charset "UTF-8";
+
+.animated {
+    -moz-animation-duration: 1s;
+    -moz-animation-fill-mode: both;
+    -o-animation-duration: 1s;
+    -o-animation-fill-mode: both;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-fill-mode: both;
+    animation-duration: 1s;
+    animation-fill-mode: both;
+}
+
+    .animated.hinges {
+        -moz-animation-duration: 2s;
+        -o-animation-duration: 2s;
+        -webkit-animation-duration: 2s;
+        animation-duration: 2s;
+    }
+
+    .animated.slow {
+        -moz-animation-duration: 3s;
+        -o-animation-duration: 3s;
+        -webkit-animation-duration: 3s;
+        animation-duration: 3s;
+    }
+
+    .animated.snail {
+        -moz-animation-duration: 4s;
+        -o-animation-duration: 4s;
+        -webkit-animation-duration: 4s;
+        animation-duration: 4s;
+    }
+
+@-webkit-keyframes shake {
+    0%, 100% {
+        -webkit-transform: translateX(0);
+    }
+
+    10%, 30%, 50%, 70%, 90% {
+        -webkit-transform: translateX(-10px);
+    }
+
+    20%, 40%, 60%, 80% {
+        -webkit-transform: translateX(10px);
+    }
+}
+
+@-moz-keyframes shake {
+    0%, 100% {
+        -moz-transform: translateX(0);
+    }
+
+    10%, 30%, 50%, 70%, 90% {
+        -moz-transform: translateX(-10px);
+    }
+
+    20%, 40%, 60%, 80% {
+        -moz-transform: translateX(10px);
+    }
+}
+
+@-o-keyframes shake {
+    0%, 100% {
+        -o-transform: translateX(0);
+    }
+
+    10%, 30%, 50%, 70%, 90% {
+        -o-transform: translateX(-10px);
+    }
+
+    20%, 40%, 60%, 80% {
+        -o-transform: translateX(10px);
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-10px);
+    }
+
+    20%, 40%, 60%, 80% {
+        transform: translateX(10px);
+    }
+}
+
+.close {
+    color: #FFFFFF;
+}
+
+.shake {
+    -moz-animation-name: shake;
+    -o-animation-name: shake;
+    -webkit-animation-name: shake;
+    animation-name: shake;
+}
+
+.logo {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.hintBox {
+    border: #aeaeae 1px;
+    border-style: solid;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.login .modal-dialog {
+    width: 350px;
+}
+
+.login .modal-footer {
+    border-top: 0;
+    margin-top: 0px;
+    padding: 10px 20px 20px;
+}
+
+.login .modal-header {
+    border: 0 none;
+    padding: 15px 15px 15px;
+    /*     padding: 11px 15px; */
+}
+
+.login .modal-body { /*     background-color: #eeeeee; */
+}
+
+.login .forgot {
+    color: #797979;
+    margin-left: 0;
+    overflow: hidden;
+    text-align: center;
+    width: 100%;
+}
+
+.login .btn-login, .registerBox .btn-register {
+    background-color: #00BBFF;
+    border-color: #00BBFF;
+    border-width: 0;
+    color: #FFFFFF;
+    display: block;
+    margin: 0 auto;
+    padding: 15px 50px;
+    text-transform: uppercase;
+    width: 100%;
+}
+
+    .login .btn-login:hover, .registerBox .btn-register:hover {
+        background-color: #00A4E4;
+        color: #FFFFFF;
+    }
+
+.login .form-control {
+    background-color: rgba(0, 0, 0, 0.09);
+    border-radius: 3px;
+    box-shadow: 0 1px 0px 0px rgba(0, 0, 0, 0.09) inset;
+    color: #FFFFFF;
+}
+
+    .login .form-control:hover {
+        background-color: rgba(0, 0, 0, .16);
+    }
+
+    .login .form-control:focus {
+        background-color: rgba(0, 0, 0, 0.23);
+        box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.04) inset;
+        color: #FFFFFF;
+    }
+
+.login .box .form input[type="text"], .login .box .form input[type="password"] {
+    border: none;
+    border-radius: 3px;
+    color: #ffffff;
+    font-size: 16px;
+    height: 46px;
+    margin-bottom: 5px;
+    padding: 13px 12px;
+    width: 100%;
+}
+
+@media (max-width: 400px) {
+    .login .modal-dialog {
+        width: 100%;
+    }
+}
+
+.big-login, .big-register {
+    background-color: #00bbff;
+    border-radius: 7px;
+    border-width: 2px;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 200;
+    padding: 16px 60px;
+    text-transform: uppercase;
+    transition: all 0.3s ease 0s;
+}
+
+    .big-login:hover {
+        background-color: #00A4E4;
+        color: #FFFFFF;
+    }
+
+.big-register {
+    background-color: rgba(0, 0, 0, .0);
+    border-color: #00bbff;
+    color: #00bbff;
+}
+
+    .big-register:hover {
+        border-color: #00A4E4;
+        color: #00A4E4;
+    }

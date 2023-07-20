@@ -1,0 +1,163 @@
+﻿@model IndexViewModel;
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<div>
+    @if (Model.IsLoggedIn)
+    {
+        @using (Html.BeginForm("WatchMode", "BlockList"))
+        {
+            var buttonClass = Model.WatchModeStatus ? "btn-success" : "btn-danger";
+            var buttonTitle = Model.WatchModeStatus ? "Enable blocking" : "Disable blocking";
+            var buttonIcon = Model.WatchModeStatus ? "fas fa-plug" : "fas fa-power-off";
+
+            <button type="submit" title="@buttonTitle" class="watchMode btn @buttonClass btn-sm" style="float: right; margin-right: 5px" onclick="return confirm('Are you sure you want to switch watch mode @(Model.WatchModeStatus ? "off" : "on")?')">
+                <i class="@buttonIcon" title="@buttonTitle"></i>
+            </button>
+        }
+
+        @if (ViewBag.Title != null && ViewBag.Title.ToString().Contains("Blocky"))
+        {
+            @using (Html.BeginForm("UpdateSetup", "Domain"))
+            {
+                <button type="submit" title="Update setup" class="btn btn-primary btn-sm" style="float: right; margin-right: 5px" onclick="return confirm('Are you sure you want to overwrite the blockList with the the URLs from the setup? (this will download the newest setup from the internet)')">
+                    <i class="fas fa-undo"></i>
+                </button>
+            }
+        }
+
+        @using (Html.BeginForm("UpdateBlockList", "Domain"))
+        {
+            <button type="submit" title="Update blocklist" class="btn btn-warning btn-sm" style="float: right; margin-right: 5px" onclick="return confirm('Are you sure you want to update the blockList with the URLs specified in the database? (this will download new entries from the internet)')">
+                <i class="fas fa-undo"></i>
+            </button>
+        }
+    }
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <ul class="nav nav-tabs">
+                    @if (Model.IsLoggedIn)
+                    {
+                        <li id="board" class="nav-item">
+                            <a href="#tabDashboardButton" class="active" data-bs-toggle="tab" onclick="return refreshDashboard();">Dashboard</a>
+                        </li>
+
+                        <li id="tabDomains" class="dynamic">
+                            <a href="#tabDomainsButton" data-bs-toggle="tab" data-url="/Domain/List">Domains</a>
+                        </li>
+                        <li id="tabClients" class="dynamic">
+                            <a href="#tabClientsButton" data-bs-toggle="tab" data-url="/Client/List">Clients</a>
+                        </li>
+                        <li id="tabCategory" class="dynamic">
+                            <a href="#tabCategoryButton" data-bs-toggle="tab" data-url="/Category/List">Categories</a>
+                        </li>
+                        <li id="tabBlockLists" class="dynamic">
+                            <a href="#tabBlockListsButton" data-bs-toggle="tab" data-url="/BlockList/List">BlockLists</a>
+                        </li>
+                        <li id="tabStatsColor" class="dynamic">
+                            <a href="#tabStatsColorButton" data-bs-toggle="tab" data-url="/StatsColor/List">Stats Colors</a>
+                        </li>
+                        <li id="tabBlockyLogs" class="dynamic">
+                            <a href="#tabBlockyLogsButton" data-bs-toggle="tab" data-url="/Logs/List">Logs</a>
+                        </li>
+                        <li id="tabLogs" role="presentation">
+                            <a href="#tabFileLogsButton" data-bs-toggle="tab" onclick="return refreshLogFilesList();">Filelogs</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="tab-content">
+                    <div id="tabSpinner" style="display: none; height: inherit; margin: auto; width: 64px;">
+                        <div style='width: 64px; height: inherit; margin: auto;'>
+                            <div style='height: inherit; display: table-cell; vertical-align: middle;'>
+                                <img class='rotating' src='/images/logo.svg' style="width: 64px" alt="EonaCat Logo" />
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div id="tabDashboardButton" role="tabpanel" class="tab-pane" style="padding: 10px 0 0 0;">
+                        @await Html.PartialAsync("dashboard.cshtml", Model).ConfigureAwait(false)
+                    </div>
+
+                    @if (Model.IsLoggedIn)
+                    {
+                        <div role="tabpanel" class="tab-pane" id="tabDomainsButton">
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="tabClientsButton">
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="tabCategoryButton">
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="tabStatsColorButton">
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="tabBlockListsButton">
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="tabBlockyLogsButton">
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="tabFileLogsButton">
+                            @await Html.PartialAsync("logs.cshtml", Model).ConfigureAwait(false)
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_Modal.cshtml").ConfigureAwait(false)
+
+<script>
+    $(function () {
+        $(document).ready(function () {
+            $(".dynamic a").on("click", function () {
+                var url = $(this).data("url");
+                if (url !== undefined && url !== '') {
+                    var div = $(this).attr("href");
+                    var tabSpinner = $("#tabSpinner");
+                    tabSpinner.show();
+                    $.ajax({
+                        url: $(this).data("url"),
+                        success: function (html) {
+                            $(div).html(html);
+                            $(div).find('table.dataTables').DataTable({
+                                "order": [[1, "desc"]],
+                                "deferRender": true
+                            });
+
+                            tabSpinner.hide();
+                        }
+                    });
+                }
+            });
+
+            $('a[data-bs-toggle="tab"]').click(function (e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
+
+            $('a[data-bs-toggle="tab"]').on("shown.bs.tab", function (e) {
+                var id = $(e.target).attr("href");
+                localStorage.setItem('selectedTab', id)
+            });
+
+            var selectedTab = localStorage.getItem('selectedTab');
+            if (selectedTab != null) {
+                var tab = $('a[data-bs-toggle="tab"][href="' + selectedTab + '"]');
+                tab.click();
+                tab.tab('show');
+            }
+        });
+    });
+</script>

@@ -1,0 +1,50 @@
+﻿@model IndexViewModel;
+
+<div id="header">
+    @if (!string.IsNullOrEmpty(ViewBag.AlertType) || TempData["AlertType"] != null)
+    {
+        <script>
+        $(function () 
+        {
+            @{
+                if (TempData["AlertType"] != null)
+                {
+                    ViewBag.AlertType = TempData["AlertType"];
+                    ViewBag.AlertTitle = TempData["AlertTitle"];
+                    ViewBag.AlertMessage = TempData["AlertMessage"];
+                }
+            }
+            showAlert('@ViewBag.AlertType', '@ViewBag.AlertTitle', '@ViewBag.AlertMessage');
+            @{
+                TempData["AlertType"] = null;
+                TempData["AlertTitle"] = null;
+                TempData["AlertMessage"] = null;
+            }
+        });
+        </script>
+    }
+
+    @if (Model.IsLoggedIn)
+    {
+        <div id="userMenu" class="menu dropdown">
+            <a href="#" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                <span class="menu-title">
+                    <span class="fa fa-user" aria-hidden="true"></span>
+                    <span id="userMenuDisplayName">@Model.Name</span>
+                    <span class="caret"></span>
+                </span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <button type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#modalChangePassword">Change password</button>
+                </li>
+                <li>
+                    @using (Html.BeginForm("logout", "index", FormMethod.Post, new { @class = "form-horizontal" }))
+                    {
+                        <button type="submit" class="btn btn-default">Logout</button>
+                    }
+                </li>
+            </ul>
+        </div>
+    }
+</div>

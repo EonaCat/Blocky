@@ -1,0 +1,49 @@
+﻿<table id="colorTable" class="table table-bordered table-hover dataTables" style="width: 100%">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Value</th>
+        <th>&nbsp;</th>
+    </tr>
+    </thead>
+</table>
+
+<script>
+    $(function () {
+        var datatablesOptions = {
+            "serverSide": true,
+            "ajaxSource": '/StatsColor/GetList',
+            "serverMethod": "GET",
+            "bautoWidth": false,
+            destroy: true,
+            columns: [
+                { 'data': 'Name' },
+                { 'data': 'Value' },
+                {
+                    mRender: function (data, type, row) {
+                        return `<div class="form-group">
+                <input type="hidden" id="name" data-name="name" value="${row.Name}">
+                <button type="button" class="editColor btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#EonaCatModal" data-name="${row.Name}">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>`;
+                    },
+                    'sWidth': '50px'
+                },
+            ],
+            createdRow: function (row, data, index) {
+                if (data.Value.indexOf("#") > -1) {
+                    $('td', row).eq(1).css("background-color", data.Value);
+                }
+            },
+        };
+
+        $('#colorTable').dataTable(datatablesOptions);
+
+        $(document).on('click', '.editColor', function () {
+            var name = $(this).data('name');
+            var route = '@Url.Action("GetByName", "StatsColor")?name=' + name;
+                $('#partial').load(route);
+            });
+        });
+</script>

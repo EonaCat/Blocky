@@ -1,0 +1,48 @@
+﻿@model CategoryViewModel;
+
+<script>
+$(function ()
+{
+    $(".btn-group > .btn").click(function () 
+    {
+        $(".btn-group > .btn").removeClass("active");
+        $(this).addClass("active");
+    });
+
+        $('#categoryForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Update", "Category")',
+                data: $(this).serialize(),
+                success: function (result) {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#categoryTable').DataTable();
+                    table.ajax.reload();
+                },
+                error: function () {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#categoryTable').DataTable();
+                    table.ajax.reload();
+                }
+            });
+        });
+});
+</script>
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "categoryForm" }))
+{
+    <div class="form-group">
+        <label for="ID">ID</label>
+        @Html.TextBoxFor(x => x.Id, new { @class = "form-control", disabled = "disabled" })
+        @Html.Hidden("Id")
+    </div>
+
+    <div class="form-group">
+        <label for="Url">Name</label>
+        @Html.TextBoxFor(x => x.Name, new { id = "Name", @class = "form-control", placeholder = "Name" })
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save changes</button>
+}

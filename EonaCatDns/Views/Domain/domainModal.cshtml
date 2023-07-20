@@ -1,0 +1,94 @@
+﻿@model DomainViewModel;
+
+<script>
+$(function ()
+{
+    $(".btn-group > .btn").click(function () 
+    {
+        $(".btn-group > .btn").removeClass("active");
+        $(this).addClass("active");
+    });
+
+        $('#domainForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Update", "Domain")',
+                data: $(this).serialize(),
+                success: function (result) {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#domainTable').DataTable();
+                    table.ajax.reload();
+                },
+                error: function () {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#domainTable').DataTable();
+                    table.ajax.reload();
+                }
+            });
+        });
+});
+</script>
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "domainForm" }))
+{
+    <div class="form-group">
+        <label for="ID">ID</label>
+        @Html.TextBoxFor(x => x.Id, new { @class = "form-control", disabled = "disabled" })
+        @Html.Hidden("Id")
+    </div>
+
+    <div class="form-group">
+        <label for="Url">Url</label>
+        @Html.TextBoxFor(x => x.Url, new { id = "Url", @class = "form-control", placeholder = "Url" })
+    </div>
+
+    <div class="form-group">
+        <label for="ForwardIp">Forward Ip</label>
+        @Html.TextBoxFor(x => x.ForwardIp, new { id = "ForwardIp", @class = "form-control", placeholder = "ForwardIp" })
+    </div>
+
+    <div class="form-group">
+        List type&nbsp;
+        <div class="btn-group" data-bs-toggle="buttons">
+            @{
+                var isDefault = Model.ListType.ToLower() == "default" || Model.ListType.ToLower() == "" ? "active" : "";
+                var isBlocked = Model.ListType.ToLower() == "blocked" ? "active" : "";
+                var isAllowed = Model.ListType.ToLower() == "allowed" ? "active" : "";
+            }
+            <label class="btn btn-primary @isDefault">
+                @Html.RadioButtonFor(x => x.ListType, "default", new { id = "isDefault-true" })
+                @Html.Label("isDefault-true", "Default")
+            </label>
+
+            <label class="btn btn-primary @isBlocked">
+                @Html.RadioButtonFor(x => x.ListType, "Blocked", new { id = "isBlocked-true" })
+                @Html.Label("isBlocked-true", "Blocked")
+            </label>
+
+            <label class="btn btn-primary @isAllowed">
+                @Html.RadioButtonFor(x => x.ListType, "allowed", new { id = "isAllowed-true" })
+                @Html.Label("isAllowed-true", "Allowed")
+            </label>
+        </div>
+    </div>
+
+    if (Model.Categories != null && Model.Categories.Any())
+    {
+        <div class="form-group">
+            <label for="Category">Category</label>
+            @Html.DropDownList("Category", Model.Categories.Select(x => new SelectListItem { Text = x.Key, Value = x.Value.ToString() }), "Select Category", new { @class = "form-control" })
+        </div>
+    }
+
+    if (!string.IsNullOrEmpty(Model.FromBlockList))
+    {
+        <div class="form-group">
+            <label for="BlockList">BlockList</label>
+            @Html.TextBoxFor(x => x.FromBlockList, new { @class = "form-control", disabled = "disabled" })
+        </div>
+    }
+
+    <button type="submit" class="btn btn-primary">Save changes</button>
+}

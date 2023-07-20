@@ -1,0 +1,69 @@
+﻿@model ClientViewModel;
+
+<script>
+$(function ()
+{
+    $(".btn-group > .btn").click(function () 
+    {
+        $(".btn-group > .btn").removeClass("active");
+        $(this).addClass("active");
+    });
+
+        $('#clientForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Update", "Client")',
+                data: $(this).serialize(),
+                success: function (result) {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#clientTable').DataTable();
+                    table.ajax.reload();
+                },
+                error: function () {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#clientTable').DataTable();
+                    table.ajax.reload();
+                }
+            });
+        });
+});
+</script>
+
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "clientForm" }))
+{
+    <div class="form-group">
+        <label for="Ip">Ip</label>
+        @Html.TextBoxFor(x => x.Ip, new { @class = "form-control", placeholder = "ipAddress" })
+        @Html.Hidden("Ip")
+    </div>
+
+    <div class="form-group">
+        <label for="Name">Name</label>
+        @Html.TextBoxFor(x => x.Name, new { id = "Name", @class = "form-control", placeholder = "Name" })
+    </div>
+
+    <div class="form-group">
+
+        Blocked&nbsp;
+        <div class="btn-group" data-bs-toggle="buttons">
+            @{
+                var isEnabled = Model.IsBlocked ? "active" : "";
+                var isDisabled = !Model.IsBlocked ? "active" : "";
+            }
+            <label class="btn btn-primary @isEnabled">
+                @Html.RadioButtonFor(e => e.IsBlocked, true, new { id = "isBlocked-true" })
+                @Html.Label("isBlocked-true", "Yes")
+            </label>
+
+            <label class="btn btn-primary @isDisabled">
+                @Html.RadioButtonFor(e => e.IsBlocked, false, new { id = "isBlocked-false" })
+                @Html.Label("isBlocked-false", "No")
+            </label>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save changes</button>
+}

@@ -1,0 +1,129 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<IsPackable>true</IsPackable>
+		<LangVersion>Latest</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Version>4.0.1</Version>
+		<AssemblyVersion>4.0.1</AssemblyVersion>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
+		<OutputType>Exe</OutputType>
+		<StartupObject />
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<PackageLicenseUrl />
+		<Authors>EonaCat (Jeroen Saey)</Authors>
+		<PackageProjectUrl>https://blocky.EonaCat.com</PackageProjectUrl>
+		<PackageIcon>logo.png</PackageIcon>
+		<RepositoryType>private git</RepositoryType>
+		<RepositoryUrl>https://github.com/EonaCat/Blocky</RepositoryUrl>
+		<PackageReleaseNotes>
+			Blocky
+			Blocking domains the way you want it.
+			Copyright EonaCat (Jeroen Saey)
+			https://blocky.EonaCat.com/
+
+			This library uses EonaCatDns.
+
+			Source available on:  https://github.com/EonaCat/Blocky
+		</PackageReleaseNotes>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<Title>Blocky</Title>
+		<Copyright>EonaCat (Jeroen Saey)</Copyright>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Description>
+			Blocky is the Dns GUI for EonaCat.Dns
+			Blocking domains the way you want it.
+		</Description>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<UserSecretsId>2f661065-638b-4b95-98ed-1d96ad78e8af</UserSecretsId>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<CodeAnalysisRuleSet />
+		<NoWarn>1701;1702;1591</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<CodeAnalysisRuleSet />
+		<NoWarn>1701;1702;1591</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="Libraries\**" />
+		<Compile Remove="EonaCatDns\**" />
+		<Compile Remove="wwwroot\images\**" />
+		<Content Remove="Libraries\**" />
+		<Content Remove="EonaCatDns\**" />
+		<Content Remove="wwwroot\images\**" />
+		<EmbeddedResource Remove="Libraries\**" />
+		<EmbeddedResource Remove="EonaCatDns\**" />
+		<EmbeddedResource Remove="wwwroot\images\**" />
+		<None Remove="Libraries\**" />
+		<None Remove="EonaCatDns\**" />
+		<None Remove="wwwroot\images\**" />
+		<Content Include="icon.ico" />
+		<None Include="..\LICENSE">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="logo.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
+		<PackageReference Include="EonaCat.Logger" Version="1.2.0" />
+		<!-- ReSharper disable once VulnerablePackage -->
+		<PackageReference Include="Microsoft.AspNet.SignalR" Version="2.4.3" />
+		<PackageReference Include="System.IO" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Update="blocky.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\css\blocky.css">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\css\bootstrap.min.css">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\favicon.ico">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\js\bootstrap.bundle.min.js">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\js\jquery.min.js">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\js\signalr\dist\browser\signalr.min.js">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="libs\Microsoft.Data.Sqlite.dll">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Microsoft.Data.Sqlite.dll">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Microsoft.EntityFrameworkCore.Sqlite.dll">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\EonaCatDns\EonaCat.Dns.csproj" />
+	</ItemGroup>
+</Project>

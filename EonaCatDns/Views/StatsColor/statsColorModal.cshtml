@@ -1,0 +1,61 @@
+﻿@model ColorViewModel;
+
+<script>
+$(function ()
+{
+    $(".btn-group > .btn").click(function () 
+    {
+        $(".btn-group > .btn").removeClass("active");
+        $(this).addClass("active");
+    });
+
+        $('#colorForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Update", "StatsColor")',
+                data: $(this).serialize(),
+                success: function (result) {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#colorTable').DataTable();
+                    table.ajax.reload();
+                },
+                error: function () {
+                    $('#EonaCatModal').modal('hide');
+
+                    var table = $('#colorTable').DataTable();
+                    table.ajax.reload();
+                }
+            });
+        });
+});
+</script>
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "colorForm" }))
+{
+    <div class="form-group">
+        <label for="Name">Name</label>
+        @Html.TextBoxFor(x => x.Name, new { @class = "form-control" , disabled = "disabled" })
+        @Html.Hidden("Name")
+    </div>
+
+    <div class="form-group">
+        <label for="Value">Value</label>
+        @Html.TextBoxFor(x => x.Value, new { id = "Value", @class = "form-control",placeholder = "Value" })
+    </div>
+    <button type="submit" class="btn btn-primary">Save changes</button>
+}
+<br />
+<button id="picker"></button>
+
+<script>
+    $('#picker').colpick({
+        onChange: function (hsb, hex, rgb, el, bySetColor) 
+        {
+            $("#Value").val('#' + hex);
+        },
+        flat: true,
+        submit:false,
+        color: $("#Value").val(),
+    });
+</script>

@@ -1,0 +1,81 @@
+﻿<div id="mainContainer">
+    <div class="row">
+        <div class="col-md-12">
+            <table id="categoryTable" class="table table-bordered table-hover dataTables" style="width: 100%">
+                <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>&nbsp;</th>
+                    <th>
+                        <button type="button" class="addCategory btn btn-primary btn-sm fa fa-plus" style="float: right;" data-bs-toggle="modal" data-bs-target="#EonaCatModal"></button>
+                    </th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        var datatablesOptions = {
+            "serverSide": true,
+            "ajaxSource": '/Category/GetList',
+            "serverMethod": "GET",
+            "bautoWidth": false,
+            destroy: true,
+            order: [[0, 'desc']],
+            columns: [
+                { 'data': 'Id' },
+                { 'data': 'Name' },
+                {
+                    mRender: function (data, type, row) {
+                        var linkEdit = `<input type="hidden" id="id" name="id" value="${row.Id}">
+                        <button type="button" class="editCategory btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#EonaCatModal" data-id="${row.Id}">
+                            <i class="fas fa-edit"></i>
+                        </button>`;
+                        return linkEdit;
+                    },
+                    'sWidth': '50px'
+                },
+                {
+                    mRender: function (data, type, row) {
+                        return `<div class="form-group">
+                <form action="/Category/Delete" method="post">
+                  <input type="hidden" name="id" value="${row.Id}">
+                      <button type="submit" class="btn btn-danger btn-sm delete-category" data-confirm="Are you sure you want to delete this category?">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </div>`;
+                    },
+                    'sWidth': '50px'
+                }
+            ]
+        };
+
+        $('#categoryTable').dataTable(datatablesOptions);
+
+        // Event delegation for the delete button
+        $('#categoryTable').on('click', '.delete-category', function (e) {
+            e.preventDefault();
+            var confirmMessage = $(this).data('confirm');
+            if (confirm(confirmMessage)) {
+                // Submit the delete form
+                $(this).closest('form').submit();
+            }
+        });
+
+        $(document).on('click', '.editCategory', function () {
+                var id = $(this).data('id');
+                var route = '@Url.Action("GetById", "Category")?id=' + id;
+                $('#partial').load(route);
+            });
+            
+            $('.addCategory').on("click", function () {
+                var route = '@Url.Action("GetById", "Category")?id=0';
+                $('#partial').load(route);
+            });
+        });
+</script>

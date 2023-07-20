@@ -1,0 +1,23 @@
+﻿<!doctype html>
+<html>
+<head>
+    <!--
+    Blocky
+    Blocking domains the way you want it.
+    Copyright EonaCat (Jeroen Saey) 2017-2023
+    https://blocky.EonaCat.com
+    -->
+
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Blocky - Blocking domains the way you want it</title>
+    <script src="~/js/jquery.min.js"></script>
+    <link href="~/css/bootstrap.min.css" rel="stylesheet">
+    <link href="~/css/blocky.css" type="text/css" rel="stylesheet">
+    <script src="~/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+@await RenderSectionAsync("Scripts", false).ConfigureAwait(true)
+@RenderBody()
+</body>
+</html>

@@ -1,0 +1,74 @@
+﻿<div id="mainContainer">
+    <div class="row">
+        <div class="col-md-12">
+            <table id="blockyLogsTable" class="table table-bordered table-hover dataTables" style="width: 100%">
+                <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Date</th>
+                    <th>ClientIp</th>
+                    <th>Request</th>
+                    <th>Result</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        var datatablesOptions = {
+            "serverSide": true,
+            "ajaxSource": '/Logs/GetList',
+            "serverMethod": "GET",
+            "bautoWidth": false,
+            order: [[2, 'desc']],
+            destroy: true,
+            columns: [
+                { 'data': 'Id' },
+                { 'data': 'Date' },
+                { 'data': 'ClientIp' },
+                { 'data': 'Request' },
+                { 'data': 'Result' }
+            ],
+            createdRow: function (row, data, index) {
+                if (data.Result == "Success") {
+                    $('td', row).eq(4).addClass('allowed');
+                } else if (data.Result == "Blocked") {
+                    $('td', row).eq(4).addClass('denied');
+                }
+            },
+        }
+
+        $('#blockyLogsTable').dataTable(datatablesOptions);
+        $('#blockyLogsTable tbody').on('click', 'tr', function () 
+        {
+            var table = $('#blockyLogsTable').DataTable();
+            var data = table.row(this).data();
+            GetLogDetails(data.Id);
+        });
+        
+        async function GetLogDetails(id)
+        {
+            await HTTPRequest({
+                url: `/api/logdetails?token=${token}&id=${id}`,
+                async: true,
+                success: function (responseJSON) 
+                {
+                    if (responseJSON.response.details != null)
+                    {
+                        alert(responseJSON.response.details);
+                    }
+                },
+                error: function () 
+                {
+                },
+                invalidToken: function () {
+                    loadDashboard();
+                }
+            });
+            return false;
+        }
+    });
+</script>
