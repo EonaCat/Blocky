@@ -190,11 +190,17 @@ function showAlert(type, title, message, alert, duration = 5, countdownInterval 
 }
 
 function hideAlert(alert) {
-    alert = alert || $(".EonaCatAlert");
-    if (alert instanceof jQuery) {
-        alert.toggle();
+    if (typeof alert === "undefined")
+    {
+        return;
     }
-    else {
+
+    if (alert instanceof jQuery)
+    {
+        alert.fadeOut('slow');
+    }
+    else
+    {
         alert.innerHTML = '';
     }
 }
