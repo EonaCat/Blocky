@@ -242,7 +242,7 @@ namespace EonaCat.Dns.Core.Clients
             new CancellationTokenSource().Token,
             new CancellationTokenSource(TimeoutTcp).Token);
 
-        private readonly TcpClient _tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
+        private readonly TcpClient _tcpClient = new(AddressFamily.InterNetworkV6);
 
         private async Task<Message> QueryTcpAsync(
             Message request,

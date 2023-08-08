@@ -32,8 +32,8 @@ namespace EonaCat.Dns.Core
 {
     public class Catalog : Dictionary<DomainName, DomainNode>
     {
-        private readonly object _lock = new object();
-        private readonly HashSet<DomainName> _zoneKeys = new HashSet<DomainName>();
+        private readonly object _lock = new();
+        private readonly HashSet<DomainName> _zoneKeys = new();
 
         private void AddZone(MasterReader reader)
         {

@@ -26,7 +26,7 @@ namespace EonaCat.Dns.Core
 {
     public class DnsReader : DnsStreamBase
     {
-        private readonly Dictionary<int, List<string>> _names = new Dictionary<int, List<string>>();
+        private readonly Dictionary<int, List<string>> _names = new();
         public bool HasOriginalBytes => OriginalBytes?.Length > 0;
         public byte[] OriginalBytes { get; set; }
 

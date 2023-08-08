@@ -21,7 +21,7 @@ namespace EonaCat.Dns.Core
 {
     public class DnsStreamBase
     {
-        protected static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        protected static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         protected const int MaxPointerLength = 16383;
 

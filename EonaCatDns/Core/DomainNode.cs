@@ -29,7 +29,7 @@ namespace EonaCat.Dns.Core
             return Name.ToString();
         }
 
-        public HashSet<ResourceRecord> Resources { get; set; } = new HashSet<ResourceRecord>();
+        public HashSet<ResourceRecord> Resources { get; set; } = new();
 
         public bool IsAuthoritative { get; set; }
     }

@@ -7,8 +7,8 @@
 		<OutputType>Library</OutputType>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>Latest</LangVersion>
-		<Version>4.0.1</Version>
-		<AssemblyVersion>4.0.1</AssemblyVersion>
+		<Version>4.0.2</Version>
+		<AssemblyVersion>4.0.2</AssemblyVersion>
 		<StartupObject />
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Authors>EonaCat (Jeroen Saey)</Authors>

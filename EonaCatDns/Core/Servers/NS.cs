@@ -33,8 +33,8 @@ namespace EonaCat.Dns.Core.Servers
 
         public bool IsCacheDisabled { get; set; }
 
-        private readonly ConcurrentDictionary<string, List<ResourceRecord>> _cache = new ConcurrentDictionary<string, List<ResourceRecord>>();
-        private static readonly HttpClient HttpClient = new HttpClient();
+        private readonly ConcurrentDictionary<string, List<ResourceRecord>> _cache = new();
+        private static readonly HttpClient HttpClient = new();
 
         public Ns()
         {

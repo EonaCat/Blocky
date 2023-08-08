@@ -42,37 +42,37 @@ public class StatsManagerApi
     {
         var settings = new List<Setting>
         {
-            new Setting { Name = SettingName.ClientsBorderColor, Value = "#9639c3" },
-            new Setting { Name = SettingName.ClientsBackgroundColor, Value = "#9639c3" },
-            new Setting { Name = SettingName.BlockedBorderColor, Value = "#870808" },
-            new Setting { Name = SettingName.AllowedBackgroundColor, Value = "#006442" },
-            new Setting { Name = SettingName.BlockedBackgroundColor, Value = "#870808" },
-            new Setting { Name = SettingName.RefusedBorderColor, Value = "#a11717" },
-            new Setting { Name = SettingName.RefusedBackgroundColor, Value = "#a11717" },
-            new Setting { Name = SettingName.NameErrorBorderColor, Value = "#c60606" },
-            new Setting { Name = SettingName.NameErrorBackgroundcolor, Value = "#c60606" },
-            new Setting { Name = SettingName.ServerFailureBorderColor, Value = "#1f1f1f" },
-            new Setting { Name = SettingName.ServerFailureBackgroundColor, Value = "#1f1f1f" },
-            new Setting { Name = SettingName.CachedBorderColor, Value = "#007542" },
-            new Setting { Name = SettingName.CachedBackgroundColor, Value = "#007542" },
-            new Setting { Name = SettingName.NoErrorBorderColor, Value = "#377901" },
-            new Setting { Name = SettingName.NoErrorBackgroundColor, Value = "#377901" },
-            new Setting { Name = SettingName.TotalQueriesBorderColor, Value = "#015579" },
-            new Setting { Name = SettingName.TotalQueriesBackgroundColor, Value = "#015579" }
+            new() { Name = SettingName.ClientsBorderColor, Value = "#9639c3" },
+            new() { Name = SettingName.ClientsBackgroundColor, Value = "#9639c3" },
+            new() { Name = SettingName.BlockedBorderColor, Value = "#870808" },
+            new() { Name = SettingName.AllowedBackgroundColor, Value = "#006442" },
+            new() { Name = SettingName.BlockedBackgroundColor, Value = "#870808" },
+            new() { Name = SettingName.RefusedBorderColor, Value = "#a11717" },
+            new() { Name = SettingName.RefusedBackgroundColor, Value = "#a11717" },
+            new() { Name = SettingName.NameErrorBorderColor, Value = "#c60606" },
+            new() { Name = SettingName.NameErrorBackgroundcolor, Value = "#c60606" },
+            new() { Name = SettingName.ServerFailureBorderColor, Value = "#1f1f1f" },
+            new() { Name = SettingName.ServerFailureBackgroundColor, Value = "#1f1f1f" },
+            new() { Name = SettingName.CachedBorderColor, Value = "#007542" },
+            new() { Name = SettingName.CachedBackgroundColor, Value = "#007542" },
+            new() { Name = SettingName.NoErrorBorderColor, Value = "#377901" },
+            new() { Name = SettingName.NoErrorBackgroundColor, Value = "#377901" },
+            new() { Name = SettingName.TotalQueriesBorderColor, Value = "#015579" },
+            new() { Name = SettingName.TotalQueriesBackgroundColor, Value = "#015579" }
         };
 
         var queryTypeColors = new List<Setting>
         {
-            new Setting { Name = SettingName.QueryType1Color, Value = "#6e66ff80" },
-            new Setting { Name = SettingName.QueryType2Color, Value = "#ffa76680" },
-            new Setting { Name = SettingName.QueryType3Color, Value = "#ff66be80" },
-            new Setting { Name = SettingName.QueryType4Color, Value = "#ffed6680" },
-            new Setting { Name = SettingName.QueryType5Color, Value = "#66e4ff80" },
-            new Setting { Name = SettingName.QueryType6Color, Value = "#3fcc6f80" },
-            new Setting { Name = SettingName.QueryType7Color, Value = "#cbcc3f80" },
-            new Setting { Name = SettingName.QueryType8Color, Value = "#3f8acc80" },
-            new Setting { Name = SettingName.QueryType9Color, Value = "#73cc3f80" },
-            new Setting { Name = SettingName.QueryType10Color, Value = "#cc3f8480" }
+            new() { Name = SettingName.QueryType1Color, Value = "#6e66ff80" },
+            new() { Name = SettingName.QueryType2Color, Value = "#ffa76680" },
+            new() { Name = SettingName.QueryType3Color, Value = "#ff66be80" },
+            new() { Name = SettingName.QueryType4Color, Value = "#ffed6680" },
+            new() { Name = SettingName.QueryType5Color, Value = "#66e4ff80" },
+            new() { Name = SettingName.QueryType6Color, Value = "#3fcc6f80" },
+            new() { Name = SettingName.QueryType7Color, Value = "#cbcc3f80" },
+            new() { Name = SettingName.QueryType8Color, Value = "#3f8acc80" },
+            new() { Name = SettingName.QueryType9Color, Value = "#73cc3f80" },
+            new() { Name = SettingName.QueryType10Color, Value = "#cc3f8480" }
         };
 
         await SaveSettingsIfNotExistAsync(settings).ConfigureAwait(false);

@@ -33,11 +33,11 @@ namespace EonaCat.Dns.Core.MultiCast
 
         private static readonly IPAddress MultiCastAddressIp4 = IPAddress.Parse("224.0.1.251");
         private static readonly IPAddress MultiCastAddressIp6 = IPAddress.Parse("FF02::FB");
-        private static readonly IPEndPoint MultiCastDnsEndpointIp6 = new IPEndPoint(MultiCastAddressIp6, MultiCastPort);
-        private static readonly IPEndPoint MultiCastDnsEndpointIp4 = new IPEndPoint(MultiCastAddressIp4, MultiCastPort);
+        private static readonly IPEndPoint MultiCastDnsEndpointIp6 = new(MultiCastAddressIp6, MultiCastPort);
+        private static readonly IPEndPoint MultiCastDnsEndpointIp4 = new(MultiCastAddressIp4, MultiCastPort);
 
         private readonly List<UdpClient> _receivers;
-        private readonly ConcurrentDictionary<IPAddress, UdpClient> _senders = new ConcurrentDictionary<IPAddress, UdpClient>();
+        private readonly ConcurrentDictionary<IPAddress, UdpClient> _senders = new();
 
         public event EventHandler<UdpReceiveResult> MessageReceived;
 

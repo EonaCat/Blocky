@@ -23,7 +23,7 @@ namespace EonaCat.Dns.Core
     internal class BlockList
     {
         private const int CacheTime = 15;
-        private static readonly Cache.Memory.Cache DomainsBlockedCache = new Cache.Memory.Cache();
+        private static readonly Cache.Memory.Cache DomainsBlockedCache = new();
 
         public static void RemoveFromCache(string host)
         {

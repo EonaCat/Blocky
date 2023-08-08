@@ -22,9 +22,9 @@ public static partial class ConstantsDns
 {
     public static class DateTimeFormats
     {
-        public static string DateTimeDayStats => "dd HH";
+        public static string DateTimeDayStats => "dd-MM HH";
 
-        public static string DateTimeWeekStats => "dd HH";
+        public static string DateTimeWeekStats => "dd-MM HH";
         public static string DateTimeHourStats => "HH:mm";
 
         public static string DateTimeYearStats => "dd-MM-yyyy";

@@ -27,12 +27,12 @@ namespace EonaCat.Dns.Core
 {
     public class Message : RecordBase
     {
-        internal DnsHeader.Bytes Bytes { get; } = new DnsHeader.Bytes();
-        public DnsHeader Header { get; set; } = new DnsHeader();
-        public List<Question> Questions { get; } = new List<Question>();
-        public List<ResourceRecord> Answers { get; set; } = new List<ResourceRecord>();
-        public List<ResourceRecord> AuthorityRecords { get; set; } = new List<ResourceRecord>();
-        public List<ResourceRecord> AdditionalRecords { get; set; } = new List<ResourceRecord>();
+        internal DnsHeader.Bytes Bytes { get; } = new();
+        public DnsHeader Header { get; set; } = new();
+        public List<Question> Questions { get; } = new();
+        public List<ResourceRecord> Answers { get; set; } = new();
+        public List<ResourceRecord> AuthorityRecords { get; set; } = new();
+        public List<ResourceRecord> AdditionalRecords { get; set; } = new();
         public bool IsFromCache { get; set; }
         public bool IsBlocked { get; set; }
         public bool IsReceivedViaMultiCast { get; set; }
@@ -207,7 +207,11 @@ namespace EonaCat.Dns.Core
             catch (Exception exception)
             {
                 if (reader.HasOriginalBytes)
-                    MessageHelper.PrintPacketDetails(reader.OriginalBytes.Length, reader.OriginalBytes, "Could not retrieve dns header for message", true, true);
+                {
+                    MessageHelper.PrintPacketDetails(reader.OriginalBytes.Length, reader.OriginalBytes,
+                        "Could not retrieve dns header for message", true, true);
+                }
+
                 Logger.Log(exception, "Could not retrieve dns header for message", false);
             }
             finally

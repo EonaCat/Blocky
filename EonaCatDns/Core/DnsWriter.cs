@@ -27,8 +27,8 @@ namespace EonaCat.Dns.Core
 {
     public class DnsWriter : DnsStreamBase
     {
-        private readonly Dictionary<string, int> _pointers = new Dictionary<string, int>();
-        private readonly Stack<Stream> _scopes = new Stack<Stream>();
+        private readonly Dictionary<string, int> _pointers = new();
+        private readonly Stack<Stream> _scopes = new();
 
         public bool IsCanonical { get; set; }
 

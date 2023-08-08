@@ -19,7 +19,6 @@ using EonaCat.Dns.Database;
 using EonaCat.Dns.Managers.Stats;
 using EonaCat.Helpers;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,29 +28,10 @@ namespace EonaCat.Dns.Managers
 {
     internal class StatsManager
     {
-        private static readonly int MinutesInHour = StatsPerHour.MinutesInHour;
-        private static readonly int MinutesInDay = MinutesInHour * StatsPerHour.HoursInDay;
-        private static readonly int MinutesInWeek = MinutesInDay * StatsPerHour.DaysInWeek;
-        private static readonly int MinutesInMonth = MinutesInDay * StatsPerHour.DaysInMonth;
-        private static readonly int MinutesInYear = MinutesInDay * StatsPerHour.DaysInYear;
-
         private static readonly int HoursInDayStats = StatsPerHour.HoursInDay;
         private static readonly int HoursInWeekStats = HoursInDayStats * StatsPerHour.DaysInWeek;
         private static readonly int HoursInMonthStats = HoursInDayStats * StatsPerHour.DaysInMonth;
         private static readonly int HoursInYearStats = HoursInDayStats * StatsPerHour.DaysInYear;
-
-        private static int GetItemAmount(StatsType statsType)
-        {
-            return statsType switch
-            {
-                StatsType.LastHour => MinutesInHour,
-                StatsType.LastDay => MinutesInDay,
-                StatsType.LastWeek => MinutesInWeek,
-                StatsType.LastMonth => MinutesInMonth,
-                StatsType.LastYear => MinutesInYear,
-                _ => 0
-            };
-        }
 
         public async Task<IDictionary<string, List<StatsLog>>> GetStatsDataAsync(
             StatsType statsType, bool forceNew = false, bool isAuthenticated = false)
@@ -74,8 +54,6 @@ namespace EonaCat.Dns.Managers
 
             IsStatsRunning = true;
             var statsTotal = new StatsTotals(DateTime.Now);
-            //var items = GetItemAmount(statsType);
-
             var statsCollection = new StatsCollection
             {
                 StatsType = statsType,
@@ -90,7 +68,7 @@ namespace EonaCat.Dns.Managers
                 Clients = new List<StatsLog>()
             };
 
-            UpdateStats(statsCollection);
+            await UpdateStatsAsync(statsCollection).ConfigureAwait(false);
             var statsDictionary = await GenerateStatsDictionaryAsync(statsCollection, isAuthenticated).ConfigureAwait(false);
             StatsCache.SetCache($"{statsType}", new Dictionary<string, List<StatsLog>>(statsDictionary), TimeSpan.FromMinutes(30));
 
@@ -113,21 +91,23 @@ namespace EonaCat.Dns.Managers
                 { ConstantsDns.Stats.TotalClients, statsCollection.Clients},
             };
 
-            if (isAuthenticated)
+            if (!isAuthenticated)
             {
-                data.Add(ConstantsDns.Stats.TopDomains, await statsCollection.GetTopDomainsAsync().ConfigureAwait(false));
-                data.Add(ConstantsDns.Stats.LastQueries, await statsCollection.GetLastQueriesAsync().ConfigureAwait(false));
-                data.Add(ConstantsDns.Stats.TopBlockedDomains, await statsCollection.GetTopBlockedDomainsAsync().ConfigureAwait(false));
-                data.Add(ConstantsDns.Stats.TopClients, await statsCollection.GetTopClientsAsync().ConfigureAwait(false));
-                data.Add(ConstantsDns.Stats.QueryTypes, await statsCollection.GetTopRecordTypesAsync().ConfigureAwait(false));
+                return data;
             }
+
+            data.Add(ConstantsDns.Stats.TopDomains, await statsCollection.GetTopDomainsAsync().ConfigureAwait(false));
+            data.Add(ConstantsDns.Stats.LastQueries, await statsCollection.GetLastQueriesAsync().ConfigureAwait(false));
+            data.Add(ConstantsDns.Stats.TopBlockedDomains, await statsCollection.GetTopBlockedDomainsAsync().ConfigureAwait(false));
+            data.Add(ConstantsDns.Stats.TopClients, await statsCollection.GetTopClientsAsync().ConfigureAwait(false));
+            data.Add(ConstantsDns.Stats.QueryTypes, await statsCollection.GetTopRecordTypesAsync().ConfigureAwait(false));
 
             return data;
         }
 
         public bool IsStatsRunning { get; set; }
 
-        private static void UpdateStats(StatsCollection statsCollection)
+        private static async Task UpdateStatsAsync(StatsCollection statsCollection)
         {
             var hours = GetTotalHours(statsCollection.StatsType);
             var endDateTime = DateTime.Now;
@@ -135,7 +115,7 @@ namespace EonaCat.Dns.Managers
 
             for (var i = 0; i < hours; i++)
             {
-                var hourStats = LoadStatsForHourAsync(startDateTime.AddHours(i), startDateTime.AddHours(i + 1), statsCollection).GetAwaiter().GetResult();
+                var hourStats = await LoadStatsForHourAsync(startDateTime.AddHours(i), startDateTime.AddHours(i + 1), statsCollection).ConfigureAwait(false);
 
                 MergeStats(statsCollection.StatsTotal, hourStats.StatsByHour);
                 AddStatsForDateTimeLabel(statsCollection, hourStats.StatsByHour, hourStats.StatsByHour.DateTime.ToString(statsCollection.LabelFormat));

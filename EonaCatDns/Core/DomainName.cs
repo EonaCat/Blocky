@@ -31,9 +31,9 @@ namespace EonaCat.Dns.Core
         private const char BackslashChar = '\\';
         private const string BackslashEscaped = @"\092";
 
-        public static DomainName Root = new DomainName(string.Empty);
+        public static DomainName Root = new(string.Empty);
 
-        private readonly List<string> _labels = new List<string>();
+        private readonly List<string> _labels = new();
 
         public IReadOnlyList<string> Labels => _labels;
 

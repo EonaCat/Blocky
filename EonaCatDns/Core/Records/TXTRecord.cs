@@ -27,7 +27,7 @@ namespace EonaCat.Dns.Core.Records
             Type = RecordType.Txt;
         }
 
-        public List<string> Strings { get; set; } = new List<string>();
+        public List<string> Strings { get; set; } = new();
 
         public override void ReadData(DnsReader reader, int length)
         {

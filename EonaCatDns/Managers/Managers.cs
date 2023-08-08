@@ -27,7 +27,6 @@ using System.Net;
 using System.Text.RegularExpressions;
 using EonaCat.Dns.Managers.Stats;
 using WebException = EonaCat.Dns.Exceptions.WebException;
-using System.Collections.Generic;
 
 namespace EonaCat.Dns.Managers;
 
@@ -46,49 +45,43 @@ internal class Managers
     public StatsManager StatsManager { get; }
     public SessionManager SessionManager { get; }
     public StatsManagerApi ApiStatsManager { get; }
-    private bool IsRetrievingStats { get; set; }
+    private static bool IsRetrievingStats { get; set; }
 
     internal async Task ApiGetStatsAsync(string type, JsonTextWriter jsonWriter, bool isAuthenticated, bool forceNew)
     {
         try
         {
-            var data = new Dictionary<string, List<StatsLog>>();
-            await Task.Run(async () =>
+            if (IsRetrievingStats)
             {
-                if (!IsRetrievingStats)
-                {
-                    IsRetrievingStats = true;
-                    data = (Dictionary<string, List<StatsLog>>)await ApiStatsManager.GetStatsAsync(type, jsonWriter, isAuthenticated, forceNew).ConfigureAwait(false);
-                    IsRetrievingStats = false;
-                }
+                return;
+            }
 
-                try
-                {
-                    if (!data.Any())
-                    {
-                        return;
-                    }
+            IsRetrievingStats = true;
 
-                    await StatsDataSetParser.CreateStatsArrayAsync(jsonWriter, data).ConfigureAwait(false);
-                    await StatsDataSetParser.CreateStatisticsDataArrayAsync(jsonWriter, data).ConfigureAwait(false);
-                    await StatsDataSetParser.CreateQueryTypesArrayAsync(jsonWriter, data).ConfigureAwait(false);
-                    StatsDataSetParser.ClearUnauthenticatedData(isAuthenticated, data);
-                    await StatsDataSetParser.CreateTopClientsArrayAsync(jsonWriter, data).ConfigureAwait(false);
-                    await StatsDataSetParser.CreateTopDomainsAsync(jsonWriter, data).ConfigureAwait(false);
-                    await StatsDataSetParser.CreateTopBlockedDomainsAsync(jsonWriter, data).ConfigureAwait(false);
-                    await StatsDataSetParser.CreateLastQueriesArrayAsync(jsonWriter, data).ConfigureAwait(false);
-                }
-                catch (Exception exception)
-                {
-                    Logger.Log(exception);
-                }
-            }).ConfigureAwait(false);
+            var data = await ApiStatsManager.GetStatsAsync(type, jsonWriter, isAuthenticated, forceNew).ConfigureAwait(false);
+
+            IsRetrievingStats = false;
+
+            if (data == null || !data.Any())
+            {
+                return;
+            }
+
+            await StatsDataSetParser.CreateStatsArrayAsync(jsonWriter, data).ConfigureAwait(false);
+            await StatsDataSetParser.CreateStatisticsDataArrayAsync(jsonWriter, data).ConfigureAwait(false);
+            await StatsDataSetParser.CreateQueryTypesArrayAsync(jsonWriter, data).ConfigureAwait(false);
+            StatsDataSetParser.ClearUnauthenticatedData(isAuthenticated, data);
+            await StatsDataSetParser.CreateTopClientsArrayAsync(jsonWriter, data).ConfigureAwait(false);
+            await StatsDataSetParser.CreateTopDomainsAsync(jsonWriter, data).ConfigureAwait(false);
+            await StatsDataSetParser.CreateTopBlockedDomainsAsync(jsonWriter, data).ConfigureAwait(false);
+            await StatsDataSetParser.CreateLastQueriesArrayAsync(jsonWriter, data).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
             Logger.Log(exception);
         }
     }
+
 
     internal bool ApiIsSessionValid(string token)
     {

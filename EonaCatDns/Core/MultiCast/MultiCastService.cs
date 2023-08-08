@@ -34,14 +34,14 @@ namespace EonaCat.Dns.Core.MultiCast
         private const int MaxSize = 65507;
         private static readonly TimeSpan LastMaxLegacyUniCastTtl = TimeSpan.FromSeconds(10);
 
-        private List<NetworkInterface> _knownNetworkInterfaces = new List<NetworkInterface>();
+        private List<NetworkInterface> _knownNetworkInterfaces = new();
         private int _maxPacketSize;
 
-        private readonly RecentMessages _sentMessages = new RecentMessages();
-        private readonly RecentMessages _receivedMessages = new RecentMessages();
+        private readonly RecentMessages _sentMessages = new();
+        private readonly RecentMessages _receivedMessages = new();
         private MultiCastClient _client;
-        private readonly UdpClient _unicastClientIp4 = new UdpClient(AddressFamily.InterNetwork);
-        private readonly UdpClient _unicastClientIp6 = new UdpClient(AddressFamily.InterNetworkV6);
+        private readonly UdpClient _unicastClientIp4 = new(AddressFamily.InterNetwork);
+        private readonly UdpClient _unicastClientIp6 = new(AddressFamily.InterNetworkV6);
         private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> _networkInterfacesFilter;
 
         static MultiCastService()
@@ -215,7 +215,7 @@ namespace EonaCat.Dns.Core.MultiCast
         {
             if (!query.IsLegacyUnicast)
             {
-                await SendAsync(answer, checkDuplicate);
+                await SendAsync(answer, checkDuplicate).ConfigureAwait(false);
                 return;
             }
 

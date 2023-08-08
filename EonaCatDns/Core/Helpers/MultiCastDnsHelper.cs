@@ -26,7 +26,7 @@ namespace EonaCat.Dns.Core.Helpers
 {
     internal class MultiCastDnsHelper
     {
-        internal static ConcurrentDictionary<string, string> Hosts = new ConcurrentDictionary<string, string>();
+        internal static ConcurrentDictionary<string, string> Hosts = new();
         public static bool IsMultiCastEnabled => MultiCastService is { IsRunning: true };
         internal static MultiCastService MultiCastService { get; private set; }
         private static ServiceDiscovery ServiceDiscovery { get; set; }

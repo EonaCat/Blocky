@@ -74,7 +74,7 @@ namespace EonaCat.Dns.Core.Records
             }
         }
 
-        public List<EdnsOptionBase> Options { get; set; } = new List<EdnsOptionBase>();
+        public List<EdnsOptionBase> Options { get; set; } = new();
 
         public override void ReadData(DnsReader reader, int length)
         {

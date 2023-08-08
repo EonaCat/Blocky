@@ -190,6 +190,7 @@ function showAlert(type, title, message, alert, duration = 5, countdownInterval 
 }
 
 function hideAlert(alert) {
+    console.log(alert);
     alert = alert || $(".EonaCatAlert");
-    alert.innerHTML = "";
+    alert.toggle();
 }

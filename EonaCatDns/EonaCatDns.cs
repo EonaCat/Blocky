@@ -314,7 +314,7 @@ public class EonaCatDns : IDisposable
 
     private Task UpdateBlockedEntriesAsync(HashSet<Uri> blockedEntries, string address = null)
     {
-        return _blocker.UpdateBlockedEntriesAsync(new List<BlockListItem> { new BlockListItem { RedirectionAddress = address, Entries = blockedEntries } });
+        return _blocker.UpdateBlockedEntriesAsync(new List<BlockListItem> { new() { RedirectionAddress = address, Entries = blockedEntries } });
     }
 
     private async Task LoadSettingsAsync()

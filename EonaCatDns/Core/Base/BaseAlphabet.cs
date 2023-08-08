@@ -21,11 +21,11 @@ namespace EonaCat.Dns.Core.Base
 {
     public sealed class BaseAlphabet
     {
-        public static readonly BaseAlphabet Base16UpperCaseAlphabet = new BaseAlphabet("0123456789ABCDEF".ToCharArray());
+        public static readonly BaseAlphabet Base16UpperCaseAlphabet = new("0123456789ABCDEF".ToCharArray());
 
-        public static readonly BaseAlphabet Base16LowerCaseAlphabet = new BaseAlphabet("0123456789abcdef".ToCharArray());
+        public static readonly BaseAlphabet Base16LowerCaseAlphabet = new("0123456789abcdef".ToCharArray());
 
-        public static readonly BaseAlphabet Base32Alphabet = new BaseAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".ToCharArray(), padding: '=');
+        public static readonly BaseAlphabet Base32Alphabet = new("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".ToCharArray(), padding: '=');
 
         internal const byte NotInAlphabet = 255;
         internal readonly char[] Alphabet;

@@ -93,14 +93,14 @@ namespace EonaCat.Dns.Managers.Stats
         {
             return new List<StatsLog>
             {
-                new StatsLog { Name = ConstantsDns.Stats.TotalQueries, Value = Queries.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalNoError, Value = Success.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalServerFailure, Value = ServerError.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalNameError, Value = NameError.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalRefused, Value = Refused.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalBlocked, Value = Blocked.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalCached, Value = Cached.Sum(x => x.Value)},
-                new StatsLog { Name = ConstantsDns.Stats.TotalClients, Value = Clients.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalQueries, Value = Queries.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalNoError, Value = Success.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalServerFailure, Value = ServerError.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalNameError, Value = NameError.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalRefused, Value = Refused.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalBlocked, Value = Blocked.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalCached, Value = Cached.Sum(x => x.Value)},
+                new() { Name = ConstantsDns.Stats.TotalClients, Value = Clients.Sum(x => x.Value)},
             };
         }
     }

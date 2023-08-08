@@ -39,7 +39,7 @@ internal class Blocker : IDisposable
 {
     public static event EventHandler OnUpdateSetup;
     public static event EventHandler OnBlockListCountRetrieved;
-    private readonly LinkedList<BlockListItem> _blockListUpdateQueue = new LinkedList<BlockListItem>();
+    private readonly LinkedList<BlockListItem> _blockListUpdateQueue = new();
     internal static BlockedSetup Setup { get; set; }
     public static bool UpdateBlockList { get; internal set; }
     public static bool UpdateSetup { get; internal set; }
@@ -84,7 +84,7 @@ internal class Blocker : IDisposable
         });
     }
 
-    public static ConcurrentBag<TaskItem> RunningBlockerTasks { get; private set; } = new ConcurrentBag<TaskItem>();
+    public static ConcurrentBag<TaskItem> RunningBlockerTasks { get; private set; } = new();
 
     public void Dispose()
     {

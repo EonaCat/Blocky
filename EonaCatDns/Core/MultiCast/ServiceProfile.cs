@@ -71,9 +71,9 @@ namespace EonaCat.Dns.Core.MultiCast
         public DomainName FullyQualifiedName =>
             DomainName.Join(InstanceName, ServiceName, Domain);
 
-        public List<ResourceRecord> Resources { get; set; } = new List<ResourceRecord>();
+        public List<ResourceRecord> Resources { get; set; } = new();
 
-        public List<string> Subtypes { get; set; } = new List<string>();
+        public List<string> Subtypes { get; set; } = new();
 
         public void AddProperty(string key, string value)
         {

@@ -22,11 +22,11 @@ namespace EonaCat.Dns.Core.Base
 {
     public sealed class BaseEncoding : Encoding
     {
-        public static readonly BaseEncoding Base16UpperCase = new BaseEncoding(BaseAlphabet.Base16UpperCaseAlphabet, "base16-upper");
+        public static readonly BaseEncoding Base16UpperCase = new(BaseAlphabet.Base16UpperCaseAlphabet, "base16-upper");
 
-        public static readonly BaseEncoding Base16LowerCase = new BaseEncoding(BaseAlphabet.Base16LowerCaseAlphabet, "base16-lower");
+        public static readonly BaseEncoding Base16LowerCase = new(BaseAlphabet.Base16LowerCaseAlphabet, "base16-lower");
 
-        public static readonly BaseEncoding Base32 = new BaseEncoding(BaseAlphabet.Base32Alphabet, "base32");
+        public static readonly BaseEncoding Base32 = new(BaseAlphabet.Base32Alphabet, "base32");
 
         private readonly BaseEncoder _encoder;
         private readonly BaseDecoder _baseDecoder;

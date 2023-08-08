@@ -24,7 +24,7 @@ namespace EonaCat.Dns.Core.MultiCast
 {
     public class RecentMessages
     {
-        public ConcurrentDictionary<string, DateTime> Messages = new ConcurrentDictionary<string, DateTime>();
+        public ConcurrentDictionary<string, DateTime> Messages = new();
 
         public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(1);
 

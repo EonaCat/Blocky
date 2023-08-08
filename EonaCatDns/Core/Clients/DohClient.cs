@@ -14,13 +14,13 @@ namespace EonaCat.Dns.Core.Clients
 {
     internal class DohClient : DnsClientBase
     {
-        private static readonly DnsHandler DnsHandler = new DnsHandler(new GoogleDnsResolver());
-        private static readonly HttpClient HttpClient = new HttpClient(DnsHandler);
+        private static readonly DnsHandler DnsHandler = new(new GoogleDnsResolver());
+        private static readonly HttpClient HttpClient = new(DnsHandler);
 
         public const string DnsWireFormat = "application/dns-message";
         public const string DnsJsonFormat = "application/dns-json";
 
-        public List<string> Servers { get; set; } = new List<string>
+        public List<string> Servers { get; set; } = new()
         {
             "https://dns.google/dns-query",
             "https://cloudflare-dns.com/dns-query",

@@ -49,8 +49,8 @@ public class Server
     private SocketTcpServer _socketServerTcpV6;
 
     public static long TotalRequests { get; set; }
-    private static readonly object TotalRequestsLock = new object();
-    private static readonly object TotalBlockedLock = new object();
+    private static readonly object TotalRequestsLock = new();
+    private static readonly object TotalBlockedLock = new();
     public static long TotalBlocked { get; set; }
     public bool IsRunning { get; private set; }
 
@@ -274,7 +274,7 @@ public class Server
 
         if (_config.LogBlockedClients)
         {
-            Logger.Log($"{message.Header.Id} Received query from {remote.Address}:{remote.Port}{Environment.NewLine}for {names}, but the client is blocked, ignoring!", ELogType.WARNING);
+            Logger.Log($"Received query from {remote.Address}:{remote.Port}{Environment.NewLine}for {names}, but the client is blocked, ignoring!", ELogType.WARNING);
         }
 
         // Send back to client
@@ -295,7 +295,7 @@ public class Server
 
             if (WatchMode)
             {
-                Logger.Log($"{message.Header.Id} Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, allowing because watchMode is turned on!",
+                Logger.Log($"Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, allowing because watchMode is turned on!",
                     ELogType.WARNING);
                 continue;
             }
@@ -324,7 +324,7 @@ public class Server
 
             await SendToClientAsync(message, client).ConfigureAwait(false);
 
-            Logger.Log($"{message.Header.Id} Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, ignoring!",
+            Logger.Log($"Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, ignoring!",
                 ELogType.WARNING);
             return true;
         }
@@ -363,8 +363,8 @@ public class Server
         {
             Logger.Log(
                 message.IsFromCache
-                    ? $"{message.Header.Id} Cached response send to {remote.Address}:{remote.Port} for {question.Name}"
-                    : $"{message.Header.Id} {message.ResolveType} Response send to {remote.Address}:{remote.Port} for {question.Name}");
+                    ? $"Cached response send to {remote.Address}:{remote.Port} for {question.Name}"
+                    : $"{message.ResolveType} Response send to {remote.Address}:{remote.Port} for {question.Name}");
 
             await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient).ConfigureAwait(false);
         }
@@ -716,9 +716,12 @@ public class Server
             return;
         }
 
-        if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+        lock (_ns.Catalog)
         {
-            return;
+            if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+            {
+                return;
+            }
         }
 
         if (e.Name.EndsWith(".local"))
@@ -752,9 +755,12 @@ public class Server
             };
         }
 
-        if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+        lock (_ns.Catalog)
         {
-            return;
+            if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+            {
+                return;
+            }
         }
 
         if (ipv4)

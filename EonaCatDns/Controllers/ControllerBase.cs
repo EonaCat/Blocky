@@ -26,7 +26,7 @@ namespace EonaCat.Dns.Controllers;
 
 public class ControllerBase : Controller
 {
-    protected static Dictionary<string, string> UserTokens = new Dictionary<string, string>();
+    protected static Dictionary<string, string> UserTokens = new();
 
     protected IndexViewModel GetIndexModel()
     {

@@ -38,17 +38,17 @@ namespace EonaCat.Dns.Core.Records
 
         public ResponseCode Status { get; set; }
 
-        public Question Zone { get; set; } = new Question
+        public Question Zone { get; set; } = new()
         {
             Class = RecordClass.Internet,
             Type = RecordType.Soa
         };
 
-        public UpdateRequirementList Requirements { get; } = new UpdateRequirementList();
+        public UpdateRequirementList Requirements { get; } = new();
 
-        public UpdateResourceList Updates { get; } = new UpdateResourceList();
+        public UpdateResourceList Updates { get; } = new();
 
-        public List<ResourceRecord> AdditionalResources { get; } = new List<ResourceRecord>();
+        public List<ResourceRecord> AdditionalResources { get; } = new();
 
         public UpdateRecord CreateResponse()
         {

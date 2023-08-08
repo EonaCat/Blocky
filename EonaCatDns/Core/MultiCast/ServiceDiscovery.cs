@@ -27,13 +27,13 @@ namespace EonaCat.Dns.Core.MultiCast
 {
     internal class ServiceDiscovery : IDisposable
     {
-        private static readonly DomainName LocalDomain = new DomainName("local");
-        private static readonly DomainName SubName = new DomainName("_sub");
+        private static readonly DomainName LocalDomain = new("local");
+        private static readonly DomainName SubName = new("_sub");
 
-        public static readonly DomainName ServiceName = new DomainName("_services._dns-sd._udp.local");
+        public static readonly DomainName ServiceName = new("_services._dns-sd._udp.local");
 
         private readonly bool _ownsMultiCastDns;
-        private readonly List<ServiceProfile> _profiles = new List<ServiceProfile>();
+        private readonly List<ServiceProfile> _profiles = new();
 
         internal ServiceDiscovery()
             : this(new MultiCastService())
@@ -55,7 +55,7 @@ namespace EonaCat.Dns.Core.MultiCast
 
         internal bool AnswersContainsAdditionalRecords { get; set; }
 
-        internal Ns NameServer { get; } = new Ns
+        internal Ns NameServer { get; } = new()
         {
             Catalog = new Catalog(),
             AnswerAllQuestions = true

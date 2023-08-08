@@ -38,7 +38,7 @@ namespace EonaCat.Dns.Core.Records
 
         public byte[] NextHashedOwnerName { get; set; }
 
-        public List<RecordType> Types { get; set; } = new List<RecordType>();
+        public List<RecordType> Types { get; set; } = new();
 
         public override void ReadData(DnsReader reader, int length)
         {
