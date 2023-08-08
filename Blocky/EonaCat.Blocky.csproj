@@ -5,8 +5,8 @@
 		<IsPackable>true</IsPackable>
 		<LangVersion>Latest</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>4.0.2</Version>
-		<AssemblyVersion>4.0.2</AssemblyVersion>
+		<Version>4.0.3</Version>
+		<AssemblyVersion>4.0.3</AssemblyVersion>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<ApplicationIcon>icon.ico</ApplicationIcon>
 		<OutputType>Exe</OutputType>
