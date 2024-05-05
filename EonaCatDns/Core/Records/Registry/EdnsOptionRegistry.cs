@@ -18,27 +18,26 @@ limitations under the License
 using System;
 using System.Collections.Generic;
 
-namespace EonaCat.Dns.Core.Records.Registry
+namespace EonaCat.Dns.Core.Records.Registry;
+
+public static class EdnsOptionRegistry
 {
-    public static class EdnsOptionRegistry
+    public static Dictionary<EdnsOptionType, Func<EdnsOptionBase>> Options;
+
+    static EdnsOptionRegistry()
     {
-        public static Dictionary<EdnsOptionType, Func<EdnsOptionBase>> Options;
+        Options = new Dictionary<EdnsOptionType, Func<EdnsOptionBase>>();
+        AddToStore<EdnsPaddingOption>();
+        AddToStore<EdnsNsidOption>();
+        AddToStore<EdnsKeepaliveOption>();
+        AddToStore<EdnsDauOption>();
+        AddToStore<EdnsDhuOption>();
+        AddToStore<EdnsN3UOption>();
+    }
 
-        static EdnsOptionRegistry()
-        {
-            Options = new Dictionary<EdnsOptionType, Func<EdnsOptionBase>>();
-            AddToStore<EdnsPaddingOption>();
-            AddToStore<EdnsNsidOption>();
-            AddToStore<EdnsKeepaliveOption>();
-            AddToStore<EdnsDauOption>();
-            AddToStore<EdnsDhuOption>();
-            AddToStore<EdnsN3UOption>();
-        }
-
-        public static void AddToStore<T>() where T : EdnsOptionBase, new()
-        {
-            var option = new T();
-            Options.Add(option.Type, () => new T());
-        }
+    public static void AddToStore<T>() where T : EdnsOptionBase, new()
+    {
+        var option = new T();
+        Options.Add(option.Type, () => new T());
     }
 }

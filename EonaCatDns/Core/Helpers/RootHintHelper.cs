@@ -15,44 +15,43 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Helpers
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+namespace EonaCat.Dns.Core.Helpers;
+
+internal class RootHintHelper
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-
-    internal class RootHintHelper
+    public static List<RootHintEntry> Parse(Stream streamReader)
     {
-        public static List<RootHintEntry> Parse(Stream streamReader)
+        using var reader = new StreamReader(streamReader);
+        var entries = new List<RootHintEntry>();
+        while (reader.ReadLine() is { } line)
         {
-            using var reader = new StreamReader(streamReader);
-            var entries = new List<RootHintEntry>();
-            while (reader.ReadLine() is { } line)
+            if (line.StartsWith(";") || line.Trim().Length == 0)
             {
-                if (line.StartsWith(";") || line.Trim().Length == 0)
-                {
-                    continue;
-                }
-
-                var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (parts.Length != 4)
-                {
-                    throw new ArgumentException("EonaCatDns: " + "Invalid line: " + line);
-                }
-
-                var entry = new RootHintEntry
-                {
-                    Name = parts[0],
-                    Ttl = int.Parse(parts[1]),
-                    Type = parts[2],
-                    Value = parts[3]
-                };
-
-                entries.Add(entry);
+                continue;
             }
 
-            return entries;
+            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length != 4)
+            {
+                throw new ArgumentException("EonaCatDns: " + "Invalid line: " + line);
+            }
+
+            var entry = new RootHintEntry
+            {
+                Name = parts[0],
+                Ttl = int.Parse(parts[1]),
+                Type = parts[2],
+                Value = parts[3]
+            };
+
+            entries.Add(entry);
         }
+
+        return entries;
     }
 }

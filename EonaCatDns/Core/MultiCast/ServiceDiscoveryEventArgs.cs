@@ -15,10 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.MultiCast
+namespace EonaCat.Dns.Core.MultiCast;
+
+public class ServiceDiscoveryEventArgs : MessageEventArgs
 {
-    public class ServiceDiscoveryEventArgs : MessageEventArgs
-    {
-        public DomainName ServiceInstanceName { get; set; }
-    }
+    public DomainName ServiceInstanceName { get; set; }
 }

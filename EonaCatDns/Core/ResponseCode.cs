@@ -15,44 +15,43 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public enum ResponseCode : byte
 {
-    public enum ResponseCode : byte
-    {
-        NoError = 0,
+    NoError = 0,
 
-        FormatError = 1,
+    FormatError = 1,
 
-        ServerFailure = 2,
+    ServerFailure = 2,
 
-        NameError = 3,
+    NameError = 3,
 
-        NotImplemented = 4,
+    NotImplemented = 4,
 
-        Refused = 5,
+    Refused = 5,
 
-        YxDomain = 6,
+    YxDomain = 6,
 
-        YxrrSet = 7,
+    YxrrSet = 7,
 
-        NxrrSet = 8,
+    NxrrSet = 8,
 
-        NotAuthoritative = 9,
+    NotAuthoritative = 9,
 
-        NotZone = 10,
+    NotZone = 10,
 
-        BadVersion = 16,
+    BadVersion = 16,
 
-        BadSignature = 16,
+    BadSignature = 16,
 
-        BadKey = 17,
+    BadKey = 17,
 
-        BadTime = 18,
+    BadTime = 18,
 
-        Badmode = 19,
+    Badmode = 19,
 
-        Badname = 20,
+    Badname = 20,
 
-        Badalg = 21,
-    }
+    Badalg = 21
 }

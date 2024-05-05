@@ -15,48 +15,41 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records.Registry;
 using System.Collections.Generic;
+using EonaCat.Dns.Core.Records.Registry;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class EdnsDhuOption : EdnsOptionBase
 {
-    public class EdnsDhuOption : EdnsOptionBase
+    public EdnsDhuOption()
     {
-        public EdnsDhuOption()
-        {
-            Type = EdnsOptionType.Dhu;
-            Algorithms = new List<DigestType>();
-        }
+        Type = EdnsOptionType.Dhu;
+        Algorithms = new List<DigestType>();
+    }
 
-        public List<DigestType> Algorithms { get; set; }
+    public List<DigestType> Algorithms { get; set; }
 
-        public static EdnsDhuOption Create()
-        {
-            var option = new EdnsDhuOption();
-            option.Algorithms.AddRange(DigestRegistry.Digests.Keys);
-            return option;
-        }
+    public static EdnsDhuOption Create()
+    {
+        var option = new EdnsDhuOption();
+        option.Algorithms.AddRange(DigestRegistry.Digests.Keys);
+        return option;
+    }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Algorithms.Clear();
-            for (; length > 0; length--)
-            {
-                Algorithms.Add((DigestType)reader.ReadByte());
-            }
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Algorithms.Clear();
+        for (; length > 0; length--) Algorithms.Add((DigestType)reader.ReadByte());
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            foreach (var algorithm in Algorithms)
-            {
-                writer.WriteByte((byte)algorithm);
-            }
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        foreach (var algorithm in Algorithms) writer.WriteByte((byte)algorithm);
+    }
 
-        public override string ToString()
-        {
-            return $";   DHU = {string.Join(", ", Algorithms)}";
-        }
+    public override string ToString()
+    {
+        return $";   DHU = {string.Join(", ", Algorithms)}";
     }
 }

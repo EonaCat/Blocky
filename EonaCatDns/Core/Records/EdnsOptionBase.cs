@@ -15,14 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public abstract class EdnsOptionBase
 {
-    public abstract class EdnsOptionBase
-    {
-        public EdnsOptionType Type { get; set; }
+    public EdnsOptionType Type { get; set; }
 
-        public abstract void ReadData(DnsReader reader, int length);
+    public abstract void ReadData(DnsReader reader, int length);
 
-        public abstract void WriteData(DnsWriter writer);
-    }
+    public abstract void WriteData(DnsWriter writer);
 }

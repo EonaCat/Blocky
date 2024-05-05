@@ -1,14 +1,12 @@
-namespace EonaCat.Blocky.Models
+namespace EonaCat.Blocky.Models;
+// Blocky
+// Blocking domains the way you want it.
+// Copyright EonaCat (Jeroen Saey) 2017-2023
+// https://blocky.EonaCat.com
+
+public class ErrorViewModel
 {
-    // Blocky
-    // Blocking domains the way you want it.
-    // Copyright EonaCat (Jeroen Saey) 2017-2023
-    // https://blocky.EonaCat.com
+    public string RequestId { get; set; }
 
-    public class ErrorViewModel
-    {
-        public string RequestId { get; set; }
-
-        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
-    }
+    public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
 }

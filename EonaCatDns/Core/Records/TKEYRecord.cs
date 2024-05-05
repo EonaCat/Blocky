@@ -17,76 +17,75 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class TkeyRecord : ResourceRecord
 {
-    public class TkeyRecord : ResourceRecord
+    private static readonly byte[] NoData = Array.Empty<byte>();
+
+    public TkeyRecord()
     {
-        private static readonly byte[] NoData = Array.Empty<byte>();
+        Type = RecordType.Tkey;
+        Class = RecordClass.Any;
+        Ttl = TimeSpan.Zero;
+        OtherData = NoData;
+    }
 
-        public TkeyRecord()
-        {
-            Type = RecordType.Tkey;
-            Class = RecordClass.Any;
-            Ttl = TimeSpan.Zero;
-            OtherData = NoData;
-        }
+    public DomainName Algorithm { get; set; }
 
-        public DomainName Algorithm { get; set; }
+    public DateTime Inception { get; set; }
 
-        public DateTime Inception { get; set; }
+    public DateTime Expiration { get; set; }
 
-        public DateTime Expiration { get; set; }
+    public KeyExchangeMode Mode { get; set; }
 
-        public KeyExchangeMode Mode { get; set; }
+    public ResponseCode Error { get; set; }
 
-        public ResponseCode Error { get; set; }
+    public byte[] Key { get; set; }
 
-        public byte[] Key { get; set; }
+    public byte[] OtherData { get; set; }
 
-        public byte[] OtherData { get; set; }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Algorithm = reader.ReadDomainName();
+        Inception = reader.ReadDateTime32();
+        Expiration = reader.ReadDateTime32();
+        Mode = (KeyExchangeMode)reader.ReadUInt16();
+        Error = (ResponseCode)reader.ReadUInt16();
+        Key = reader.ReadUInt16LengthPrefixedBytes();
+        OtherData = reader.ReadUInt16LengthPrefixedBytes();
+    }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Algorithm = reader.ReadDomainName();
-            Inception = reader.ReadDateTime32();
-            Expiration = reader.ReadDateTime32();
-            Mode = (KeyExchangeMode)reader.ReadUInt16();
-            Error = (ResponseCode)reader.ReadUInt16();
-            Key = reader.ReadUInt16LengthPrefixedBytes();
-            OtherData = reader.ReadUInt16LengthPrefixedBytes();
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteDomainName(Algorithm);
+        writer.WriteDateTime32(Inception);
+        writer.WriteDateTime32(Expiration);
+        writer.WriteUInt16((ushort)Mode);
+        writer.WriteUInt16((ushort)Error);
+        writer.WriteUint16LengthPrefixedBytes(Key);
+        writer.WriteUint16LengthPrefixedBytes(OtherData);
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteDomainName(Algorithm);
-            writer.WriteDateTime32(Inception);
-            writer.WriteDateTime32(Expiration);
-            writer.WriteUInt16((ushort)Mode);
-            writer.WriteUInt16((ushort)Error);
-            writer.WriteUint16LengthPrefixedBytes(Key);
-            writer.WriteUint16LengthPrefixedBytes(OtherData);
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Algorithm = reader.ReadDomainName();
+        Inception = reader.ReadDateTime();
+        Expiration = reader.ReadDateTime();
+        Mode = (KeyExchangeMode)reader.ReadUInt16();
+        Error = (ResponseCode)reader.ReadUInt16();
+        Key = Convert.FromBase64String(reader.ReadString());
+        OtherData = Convert.FromBase64String(reader.ReadString());
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Algorithm = reader.ReadDomainName();
-            Inception = reader.ReadDateTime();
-            Expiration = reader.ReadDateTime();
-            Mode = (KeyExchangeMode)reader.ReadUInt16();
-            Error = (ResponseCode)reader.ReadUInt16();
-            Key = Convert.FromBase64String(reader.ReadString());
-            OtherData = Convert.FromBase64String(reader.ReadString());
-        }
-
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteDomainName(Algorithm);
-            writer.WriteDateTime(Inception);
-            writer.WriteDateTime(Expiration);
-            writer.WriteUInt16((ushort)Mode);
-            writer.WriteUInt16((ushort)Error);
-            writer.WriteBase64String(Key);
-            writer.WriteBase64String(OtherData ?? NoData, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteDomainName(Algorithm);
+        writer.WriteDateTime(Inception);
+        writer.WriteDateTime(Expiration);
+        writer.WriteUInt16((ushort)Mode);
+        writer.WriteUInt16((ushort)Error);
+        writer.WriteBase64String(Key);
+        writer.WriteBase64String(OtherData ?? NoData, false);
     }
 }

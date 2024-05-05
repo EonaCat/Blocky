@@ -15,41 +15,43 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Helpers;
 using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using EonaCat.Dns.Core.Helpers;
 
-namespace EonaCat.Dns.Core.Extensions
+namespace EonaCat.Dns.Core.Extensions;
+
+public static class IpAddressExtensions
 {
-    public static class IpAddressExtensions
+    public static string GetArpaName(this IPAddress ip)
     {
-        public static string GetArpaName(this IPAddress ip)
+        var bytes = ip.GetAddressBytes();
+        Array.Reverse(bytes);
+
+        switch (ip.AddressFamily)
         {
-            var bytes = ip.GetAddressBytes();
-            Array.Reverse(bytes);
-
-            switch (ip.AddressFamily)
+            // check IP6
+            case AddressFamily.InterNetworkV6:
             {
-                // check IP6
-                case AddressFamily.InterNetworkV6:
-                    {
-                        // reversed bytes need to be split into 4 bit parts and separated by '.'
-                        var newBytes = bytes
-                            .SelectMany(b => new[] { b >> 0 & 15, b >> 4 & 15 })
-                            .Aggregate(new StringBuilder(), (s, b) => s.Append(b.ToString("x")).Append(".")) + "ip6" + ResolveHelper.Config.ArpaPostFix;
+                // reversed bytes need to be split into 4 bit parts and separated by '.'
+                var newBytes = bytes
+                                   .SelectMany(b => new[] { (b >> 0) & 15, (b >> 4) & 15 })
+                                   .Aggregate(new StringBuilder(), (s, b) => s.Append(b.ToString("x")).Append(".")) +
+                               "ip6" +
+                               ResolveHelper.Config.ArpaPostFix;
 
-                        return newBytes;
-                    }
-                case AddressFamily.InterNetwork:
-                    // else IP4
-                    return string.Join(".", bytes) + ".in-addr" + ResolveHelper.Config.ArpaPostFix;
-
-                default:
-                    throw new ArgumentException("EonaCatDns: " + $"Unsupported address family '{ip.AddressFamily}'.", nameof(ip));
+                return newBytes;
             }
+            case AddressFamily.InterNetwork:
+                // else IP4
+                return string.Join(".", bytes) + ".in-addr" + ResolveHelper.Config.ArpaPostFix;
+
+            default:
+                throw new ArgumentException("EonaCatDns: " + $"Unsupported address family '{ip.AddressFamily}'.",
+                    nameof(ip));
         }
     }
 }

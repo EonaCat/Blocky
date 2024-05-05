@@ -18,47 +18,54 @@ limitations under the License
 using System.Net;
 using System.Net.Sockets;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public abstract class AddressRecordBase : ResourceRecord
 {
-    public abstract class AddressRecordBase : ResourceRecord
+    protected AddressRecordBase()
     {
-        protected AddressRecordBase()
+        Ttl = TTLDefaultHosts;
+    }
+
+    public IPAddress Address { get; set; }
+
+    public static AddressRecordBase Create(DomainName name, IPAddress address)
+    {
+        if (address.AddressFamily == AddressFamily.InterNetwork)
         {
-            Ttl = TTLDefaultHosts;
+            return new ARecord { Name = name, Address = address };
         }
 
-        public IPAddress Address { get; set; }
+        return new AaaaRecord { Name = name, Address = address };
+    }
 
-        public static AddressRecordBase Create(DomainName name, IPAddress address)
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Address = reader.ReadIpAddress(length);
+    }
+
+    public override void ReadData(MasterReader reader)
+    {
+        Address = reader.ReadIpAddress();
+    }
+
+    public override void WriteData(DnsWriter writer)
+    {
+        if (Address == null)
         {
-            if (address.AddressFamily == AddressFamily.InterNetwork)
-            {
-                return new ARecord { Name = name, Address = address };
-            }
-
-            return new AaaaRecord { Name = name, Address = address };
+            return;
         }
 
-        public override void ReadData(DnsReader reader, int length)
+        writer.WriteIpAddress(Address);
+    }
+
+    public override void WriteData(MasterWriter writer)
+    {
+        if (Address == null)
         {
-            Address = reader.ReadIpAddress(length);
+            return;
         }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Address = reader.ReadIpAddress();
-        }
-
-        public override void WriteData(DnsWriter writer)
-        {
-            if (Address == null) return;
-            writer.WriteIpAddress(Address);
-        }
-
-        public override void WriteData(MasterWriter writer)
-        {
-            if (Address == null) return;
-            writer.WriteIpAddress(Address, appendSpace: false);
-        }
+        writer.WriteIpAddress(Address, false);
     }
 }

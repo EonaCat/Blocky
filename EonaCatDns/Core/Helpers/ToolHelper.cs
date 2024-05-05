@@ -14,26 +14,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
 */
+
 using System;
 
-namespace EonaCat.Dns.Core.Helpers
+namespace EonaCat.Dns.Core.Helpers;
+
+internal static class ToolHelper
 {
-    internal static class ToolHelper
+    public static void ExitAfterTool(bool appExitAfterCommand, bool onlyExitAfterKeyPress)
     {
-        public static void ExitAfterTool(bool appExitAfterCommand, bool onlyExitAfterKeyPress)
+        if (!appExitAfterCommand)
         {
-            if (!appExitAfterCommand)
-            {
-                return;
-            }
-
-            if (onlyExitAfterKeyPress)
-            {
-                Console.WriteLine("Press a key to exit");
-                Console.ReadKey();
-            }
-
-            Environment.Exit(0);
+            return;
         }
+
+        if (onlyExitAfterKeyPress)
+        {
+            Console.WriteLine("Press a key to exit");
+            Console.ReadKey();
+        }
+
+        Environment.Exit(0);
     }
 }

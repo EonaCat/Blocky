@@ -15,18 +15,17 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public enum OperationCode : ushort
 {
-    public enum OperationCode : ushort
-    {
-        Query = 0,
+    Query = 0,
 
-        InverseQuery = 1,
+    InverseQuery = 1,
 
-        Status = 2,
+    Status = 2,
 
-        Notify = 4,
+    Notify = 4,
 
-        Update = 5,
-    }
+    Update = 5
 }

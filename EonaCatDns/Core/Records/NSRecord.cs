@@ -15,35 +15,34 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class NsRecord : ResourceRecord
 {
-    public class NsRecord : ResourceRecord
+    public NsRecord()
     {
-        public NsRecord()
-        {
-            Type = RecordType.Ns;
-        }
+        Type = RecordType.Ns;
+    }
 
-        public DomainName Authority { get; set; }
+    public DomainName Authority { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Authority = reader.ReadDomainName();
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Authority = reader.ReadDomainName();
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Authority = reader.ReadDomainName();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Authority = reader.ReadDomainName();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteDomainName(Authority);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteDomainName(Authority);
+    }
 
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteDomainName(Authority, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteDomainName(Authority, false);
     }
 }

@@ -16,13 +16,6 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Core;
-using EonaCat.Dns.Database;
-using EonaCat.Dns.Database.Models.Entities;
-using EonaCat.Dns.Managers;
-using EonaCat.Dns.Managers.Stats;
-using EonaCat.Helpers.Helpers;
-using EonaCat.Logger;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,9 +23,17 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
-using EonaCat.Dns.Models;
+using EonaCat.Dns.Core;
+using EonaCat.Dns.Database;
+using EonaCat.Dns.Database.Models.Entities;
 using EonaCat.Dns.Exceptions;
+using EonaCat.Dns.Managers;
+using EonaCat.Dns.Managers.Stats;
+using EonaCat.Dns.Models;
+using EonaCat.Helpers.Helpers;
+using EonaCat.Logger;
 using EonaCat.Logger.Extensions;
+using BlockList = EonaCat.Dns.Database.Models.Entities.BlockList;
 
 namespace EonaCat.Dns;
 
@@ -41,8 +42,6 @@ public class EonaCatDns : IDisposable
     private Blocker _blocker;
 
     private EonaCatDnsConfig _config;
-
-    public event EventHandler OnUpdateSetup;
 
     /*Comodo Secure Dns "8.26.56.26" */
     /*DNS.WATCH "84.200.70.40" */
@@ -83,43 +82,10 @@ public class EonaCatDns : IDisposable
         SetConfig(config);
     }
 
-    public EonaCatDns UseExceptionHandling()
-    {
-        AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
-        AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
-        AppDomain.CurrentDomain.FirstChanceException -= CurrentDomain_FirstChanceException;
-        AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
-        return this;
-    }
-
-    private static void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
-    {
-        Debug.WriteLine(e.Exception.FormatExceptionToMessage(), ELogType.ERROR, false);
-    }
-
-    private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
-    {
-        Logger.Log(e.ExceptionObject.ToString(), ELogType.ERROR, false);
-    }
-
-    private void SetConfig(EonaCatDnsConfig config)
-    {
-        Config = config;
-        CreateConfigurationFolders();
-        SetStatsInterval();
-    }
-
-    private void SetStatsInterval()
-    {
-        ConstantsDns.Stats.RefreshInterval = _config.StatsRefreshInterval;
-    }
-
     public bool IsFirstTime { get; private set; }
     public bool IsAdminEnabled { get; private set; }
     public bool IsRunning { get; private set; }
     internal DnsServer InternalDnsServer { get; private set; }
-
     public static int WebServicePort { get; private set; }
 
     private EonaCatDnsWebServer EonaCatDnsWebServer { get; set; }
@@ -135,10 +101,21 @@ public class EonaCatDns : IDisposable
         {
             if (IsRunning)
             {
-                throw new Exception("EonaCatDns: " + "EonaCatDns: Cannot change configuration, please stop the EonaCatDns Server first");
+                throw new Exception("EonaCatDns: " +
+                                    "EonaCatDns: Cannot change configuration, please stop the EonaCatDns Server first");
             }
 
-            _config = ParseConfig(value);
+            _config = ParseConfig(value).Result;
+        }
+    }
+
+    private Task LoadBlockerSettingsAsync
+    {
+        get
+        {
+            Blocker.OnUpdateSetup += Blocker_OnUpdateSetup;
+            Blocker.ProgressToConsole = Config.ProgressToConsole;
+            return Task.FromResult(true);
         }
     }
 
@@ -147,16 +124,51 @@ public class EonaCatDns : IDisposable
         Dispose(true);
     }
 
-    public Task<StatsOverview> GetStatsOverviewAsync()
+    public event EventHandler OnUpdateSetup;
+
+    public EonaCatDns UseExceptionHandling()
     {
-        return DatabaseManager.GetStatsOverviewAsync();
+        AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+        AppDomain.CurrentDomain.FirstChanceException -= CurrentDomain_FirstChanceException;
+        AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
+        return this;
     }
 
-    private EonaCatDnsConfig ParseConfig(EonaCatDnsConfig value)
+    private static void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
+    {
+        Debug.WriteLine(e.Exception.FormatExceptionToMessage(), ELogType.ERROR, false);
+    }
+
+    private static async void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        await Logger.LogAsync(e.ExceptionObject.ToString(), ELogType.ERROR, false).ConfigureAwait(false);
+    }
+
+    private void SetConfig(EonaCatDnsConfig config)
+    {
+        Config = config;
+        CreateConfigurationFolders();
+        SetStatsInterval();
+    }
+
+    private void SetStatsInterval()
+    {
+        ConstantsDns.Stats.RefreshInterval = _config.StatsRefreshInterval;
+    }
+
+    public async Task<StatsOverview> GetStatsOverviewAsync()
+    {
+        return await DatabaseManager.GetStatsOverviewAsync().ConfigureAwait(false);
+    }
+
+    private async Task<EonaCatDnsConfig> ParseConfig(EonaCatDnsConfig value)
     {
         if (value == null)
         {
-            throw new ArgumentNullException("EonaCatDns: " + "EonaCatDns: The configuration could not be parsed, the config is NULL");
+            throw new ArgumentNullException("EonaCatDns: " +
+                                            "EonaCatDns: The configuration could not be parsed, the config is NULL");
         }
 
         if (string.IsNullOrEmpty(value.ApplicationName))
@@ -179,21 +191,20 @@ public class EonaCatDns : IDisposable
         if (value.Resolvers != null && value.Resolvers.Any())
         {
             foreach (var endpoint in value.Resolvers)
-            {
                 if (!WebHelper.IsIpValid(endpoint))
                 {
-                    Logger.Log($"Invalid ipAddress '{endpoint}' detected, not using as a resolver");
+                    await Logger.LogAsync($"Invalid ipAddress '{endpoint}' detected, not using as a resolver")
+                        .ConfigureAwait(false);
                 }
                 else
                 {
                     resolvers.Add(endpoint);
                 }
-            }
         }
 
         if (!resolvers.Any())
         {
-            Logger.Log("No valid resolvers found, using defaults");
+            await Logger.LogAsync("No valid resolvers found, using defaults").ConfigureAwait(false);
             resolvers = DefaultResolvers.ToList();
         }
 
@@ -215,23 +226,16 @@ public class EonaCatDns : IDisposable
     {
         await CreateManagersAsync().ConfigureAwait(false);
         await LoadSettingsAsync().ConfigureAwait(false);
-        await LoadBlockerSettingsAsync().ConfigureAwait(false);
+        await LoadBlockerSettingsAsync.ConfigureAwait(false);
         await StatsManagerApi.LoadStatsColorsAsync().ConfigureAwait(false);
 
         if (IsAdminEnabled)
         {
-            EonaCatDnsWebServer.Start();
+            await EonaCatDnsWebServer.StartAsync().ConfigureAwait(false);
         }
 
         DatabaseManager.OnUpdateBlockList -= DatabaseManager_OnUpdateBlockList;
         DatabaseManager.OnUpdateBlockList += DatabaseManager_OnUpdateBlockList;
-    }
-
-    private Task LoadBlockerSettingsAsync()
-    {
-        Blocker.OnUpdateSetup += Blocker_OnUpdateSetup;
-        _blocker.ProgressToConsole = Config.ProgressToConsole;
-        return Task.FromResult(true);
     }
 
     private void Blocker_OnUpdateSetup(object sender, EventArgs e)
@@ -243,51 +247,59 @@ public class EonaCatDns : IDisposable
     {
         var blockListItem = new BlockListItem
         {
-            Entries = new HashSet<Uri>() { new(e) },
+            Entries = new HashSet<Uri> { new(e) },
             RedirectionAddress = ConstantsDns.DefaultRedirectionAddress
         };
         _blocker?.UpdateBlockedEntriesAsync(new List<BlockListItem> { blockListItem });
     }
 
+    /// <summary>
+    ///     Start the server
+    /// </summary>
+    /// <returns></returns>
     public async Task StartAsync()
+    {
+        if (IsRunning)
+        {
+            return;
+        }
+
+        Logger.MaxLogType = _config.LogLevel;
+        Logger.UseLocalTime = _config.LogInLocalTime;
+        Logger.Configure();
+
+        await Logger.LogAsync($"Starting Dns for {_config.ApplicationName}").ConfigureAwait(false);
+
+        IsRunning = true;
+        _blocker = new Blocker();
+        InternalDnsServer = new DnsServer(Config);
+
+        // Initialise the application
+        await InitialiseAsync().ConfigureAwait(false);
+        await InternalDnsServer.StartAsync().ConfigureAwait(false);
+
+        // Initialise the blocker
+        await _blocker.InitialiseAsync(_config.AutoUpdate).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Stop the server
+    /// </summary>
+    /// <returns></returns>
+    public async Task StopAsync()
     {
         if (!IsRunning)
         {
-            Logger.MaxLogType = _config.LogLevel;
-            Logger.UseLocalTime = _config.LogInLocalTime;
-            Logger.Configure();
-
-            Logger.Log($"Starting Dns for {_config.ApplicationName}");
-
-            IsRunning = true;
-            _blocker = new Blocker();
-            InternalDnsServer = new DnsServer(Config);
-
-            // Initialise the application
-            await InitialiseAsync().ConfigureAwait(false);
-
-            await InternalDnsServer.StartAsync().ConfigureAwait(false);
-
-            if (InternalDnsServer.IsRunning)
-            {
-                // Initialise the blocker
-                await _blocker.InitialiseAsync(_config.AutoUpdate).ConfigureAwait(false);
-            }
-            else
-            {
-                IsRunning = false;
-            }
+            return;
         }
-    }
 
-    public void Stop()
-    {
-        EonaCatDnsWebServer.Stop();
+        EonaCatDnsWebServer.StopAsync().Wait();
         IsRunning = false;
-        Logger.Log($"{DllInfo.ApplicationName} stopped");
+        await Logger.LogAsync($"{DllInfo.ApplicationName} stopped");
     }
 
-    protected virtual void Dispose(bool disposing)
+
+    protected virtual async void Dispose(bool disposing)
     {
         if (IsDisposed)
         {
@@ -296,7 +308,8 @@ public class EonaCatDns : IDisposable
 
         if (disposing)
         {
-            Stop();
+            await StopAsync().ConfigureAwait(false);
+            _blocker.UnbindEvents();
             _blocker.Dispose();
         }
 
@@ -312,9 +325,10 @@ public class EonaCatDns : IDisposable
         }
     }
 
-    private Task UpdateBlockedEntriesAsync(HashSet<Uri> blockedEntries, string address = null)
+    private async Task UpdateBlockedEntriesAsync(HashSet<Uri> blockedEntries, string address = null)
     {
-        return _blocker.UpdateBlockedEntriesAsync(new List<BlockListItem> { new() { RedirectionAddress = address, Entries = blockedEntries } });
+        await _blocker.UpdateBlockedEntriesAsync(new List<BlockListItem>
+            { new() { RedirectionAddress = address, Entries = blockedEntries } }).ConfigureAwait(false);
     }
 
     private async Task LoadSettingsAsync()
@@ -340,7 +354,7 @@ public class EonaCatDns : IDisposable
         }
         catch (DatabaseException databaseException)
         {
-            Logger.Log(databaseException.Message);
+            await Logger.LogAsync(databaseException.Message);
 
             IsFirstTime = true;
             await _blocker.WriteDefaultAllowListAsync().ConfigureAwait(false);
@@ -348,7 +362,7 @@ public class EonaCatDns : IDisposable
             if (settingsAmount == 0)
             {
                 await CreateDefaultSettingsAsync().ConfigureAwait(false);
-                Logger.Log("Default settings loaded");
+                await Logger.LogAsync("Default settings loaded");
             }
         }
     }
@@ -360,7 +374,7 @@ public class EonaCatDns : IDisposable
 
         WebServicePort = 9999;
         await DatabaseManager.SetSettingAsync(new Setting
-        { Name = SettingName.WebservicePort, Value = WebServicePort.ToString() }).ConfigureAwait(false);
+            { Name = SettingName.WebservicePort, Value = WebServicePort.ToString() }).ConfigureAwait(false);
     }
 
     internal async Task SaveSettingsAsync()
@@ -372,7 +386,8 @@ public class EonaCatDns : IDisposable
 
         if (Blocker.Setup != null)
         {
-            var blockedAddressSetting = await DatabaseManager.GetSettingAsync(SettingName.Blockedaddress).ConfigureAwait(false);
+            var blockedAddressSetting =
+                await DatabaseManager.GetSettingAsync(SettingName.Blockedaddress).ConfigureAwait(false);
             blockedAddressSetting.Value = Blocker.Setup.RedirectionAddress;
             await DatabaseManager.SetSettingAsync(blockedAddressSetting).ConfigureAwait(false);
         }
@@ -383,7 +398,7 @@ public class EonaCatDns : IDisposable
         DatabaseManager.AddUserAsync(x);
     }
 
-    public async Task AddBlockedEntriesAsync(HashSet<Database.Models.Entities.BlockList> blockedList,
+    public async Task AddBlockedEntriesAsync(HashSet<BlockList> blockedList,
         string address = null)
     {
         if (string.IsNullOrEmpty(address))

@@ -16,9 +16,9 @@ limitations under the License
 
 */
 
-using EonaCat.Logger;
 using System;
 using System.Diagnostics;
+using EonaCat.Logger;
 
 namespace EonaCat.Dns.Helpers;
 
@@ -35,18 +35,19 @@ public class PerformanceTimer : IDisposable
         }
 
         _message = message;
-        Logger.Log($"{_message} performanceTimer started", ELogType.DEBUG);
+        Logger.LogAsync($"{_message} performanceTimer started", ELogType.DEBUG).ConfigureAwait(false);
 
         _timer = new Stopwatch();
         _timer.Start();
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
         _timer.Stop();
         var milliSeconds = _timer.ElapsedMilliseconds;
-        Logger.Log($"{_message} - Elapsed: {MilliSecondsToReadableFormat(milliSeconds)}", ELogType.DEBUG);
-        Logger.Log($"{_message} performanceTimer stopped", ELogType.DEBUG);
+        await Logger.LogAsync($"{_message} - Elapsed: {MilliSecondsToReadableFormat(milliSeconds)}", ELogType.DEBUG)
+            .ConfigureAwait(false);
+        await Logger.LogAsync($"{_message} performanceTimer stopped", ELogType.DEBUG).ConfigureAwait(false);
     }
 
     public static string MilliSecondsToReadableFormat(long milliSeconds)

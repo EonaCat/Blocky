@@ -15,42 +15,41 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class HinfoRecord : ResourceRecord
 {
-    public class HinfoRecord : ResourceRecord
+    public HinfoRecord()
     {
-        public HinfoRecord()
-        {
-            Type = RecordType.Hinfo;
-            Ttl = TTLDefaultHosts;
-        }
+        Type = RecordType.Hinfo;
+        Ttl = TTLDefaultHosts;
+    }
 
-        public string Cpu { get; set; }
+    public string Cpu { get; set; }
 
-        public string Os { get; set; }
+    public string Os { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Cpu = reader.ReadString();
-            Os = reader.ReadString();
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Cpu = reader.ReadString();
+        Os = reader.ReadString();
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Cpu = reader.ReadString();
-            Os = reader.ReadString();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Cpu = reader.ReadString();
+        Os = reader.ReadString();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteString(Cpu);
-            writer.WriteString(Os);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteString(Cpu);
+        writer.WriteString(Os);
+    }
 
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteString(Cpu);
-            writer.WriteString(Os, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteString(Cpu);
+        writer.WriteString(Os, false);
     }
 }

@@ -16,25 +16,16 @@ limitations under the License
 
 */
 
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
 using System.IO;
 using System.Reflection;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 
 namespace EonaCat.Dns;
 
 public static class DllInfo
 {
     public const string Name = "EonaCatDns";
-
-    private static string AssemblyVersion
-    {
-        get
-        {
-            var version = Assembly.GetExecutingAssembly().GetName().Version;
-            return version != null ? version.ToString() : string.Empty;
-        }
-    }
 
     static DllInfo()
     {
@@ -45,6 +36,15 @@ public static class DllInfo
         isDebug = true;
 #endif
         VersionName = isDebug ? "DEBUG" : "RELEASE";
+    }
+
+    private static string AssemblyVersion
+    {
+        get
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            return version != null ? version.ToString() : string.Empty;
+        }
     }
 
     public static bool HideVersion { get; set; }

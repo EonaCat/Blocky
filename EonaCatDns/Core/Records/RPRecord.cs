@@ -15,41 +15,40 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class RpRecord : ResourceRecord
 {
-    public class RpRecord : ResourceRecord
+    public RpRecord()
     {
-        public RpRecord()
-        {
-            Type = RecordType.Rp;
-        }
+        Type = RecordType.Rp;
+    }
 
-        public DomainName Mailbox { get; set; } = DomainName.Root;
+    public DomainName Mailbox { get; set; } = DomainName.Root;
 
-        public DomainName TextName { get; set; } = DomainName.Root;
+    public DomainName TextName { get; set; } = DomainName.Root;
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Mailbox = reader.ReadDomainName();
-            TextName = reader.ReadDomainName();
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Mailbox = reader.ReadDomainName();
+        TextName = reader.ReadDomainName();
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Mailbox = reader.ReadDomainName();
-            TextName = reader.ReadDomainName();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Mailbox = reader.ReadDomainName();
+        TextName = reader.ReadDomainName();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteDomainName(Mailbox);
-            writer.WriteDomainName(TextName);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteDomainName(Mailbox);
+        writer.WriteDomainName(TextName);
+    }
 
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteDomainName(Mailbox);
-            writer.WriteDomainName(TextName, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteDomainName(Mailbox);
+        writer.WriteDomainName(TextName, false);
     }
 }

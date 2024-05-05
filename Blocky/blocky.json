@@ -27,7 +27,7 @@
     "IgnoreWpadRequests": true,
     "IgnoreArpaRequests": true,
     "IncludeRawInLogTable": true,
-    "ProgressToConsole": false,
+    "ProgressToConsole": true,
     "LogInLocalTime": false,
     "DontCacheList": [
       "www-www.bing.com.trafficmanager.net"

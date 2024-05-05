@@ -17,88 +17,87 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Base
+namespace EonaCat.Dns.Core.Base;
+
+public static class Base32Converter
 {
-    public static class Base32Converter
+    public static string ToString(byte[] bytes)
     {
-        public static string ToString(byte[] bytes)
+        if (bytes == null)
         {
-            if (bytes == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
-            }
-
-            return ToString(bytes, 0, bytes.Length);
+            throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
         }
 
-        public static string ToString(byte[] bytes, int offset, int count)
+        return ToString(bytes, 0, bytes.Length);
+    }
+
+    public static string ToString(byte[] bytes, int offset, int count)
+    {
+        if (bytes == null)
         {
-            if (bytes == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
-            }
-
-            if (offset < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
-            }
-
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (offset + count > bytes.Length)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (count == 0)
-            {
-                return string.Empty;
-            }
-
-            return BaseEncoding.Base32.GetString(bytes, offset, count);
+            throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
         }
 
-        public static byte[] ToBytes(string base32String)
+        if (offset < 0)
         {
-            if (base32String == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(base32String));
-            }
-
-            return ToBytes(base32String, 0, base32String.Length);
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
         }
 
-        public static byte[] ToBytes(string base32String, int offset, int count)
+        if (count < 0)
         {
-            if (base32String == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(base32String));
-            }
-
-            if (offset < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
-            }
-
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (offset + count > base32String.Length)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (count == 0)
-            {
-                return Array.Empty<byte>();
-            }
-
-            return BaseEncoding.Base32.GetBytes(base32String, offset, count);
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
         }
+
+        if (offset + count > bytes.Length)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
+        }
+
+        if (count == 0)
+        {
+            return string.Empty;
+        }
+
+        return BaseEncoding.Base32.GetString(bytes, offset, count);
+    }
+
+    public static byte[] ToBytes(string base32String)
+    {
+        if (base32String == null)
+        {
+            throw new ArgumentNullException("EonaCatDns: " + nameof(base32String));
+        }
+
+        return ToBytes(base32String, 0, base32String.Length);
+    }
+
+    public static byte[] ToBytes(string base32String, int offset, int count)
+    {
+        if (base32String == null)
+        {
+            throw new ArgumentNullException("EonaCatDns: " + nameof(base32String));
+        }
+
+        if (offset < 0)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
+        }
+
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
+        }
+
+        if (offset + count > base32String.Length)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
+        }
+
+        if (count == 0)
+        {
+            return Array.Empty<byte>();
+        }
+
+        return BaseEncoding.Base32.GetBytes(base32String, offset, count);
     }
 }

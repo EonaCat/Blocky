@@ -31,9 +31,11 @@ internal class DnsServer
 
     private Server Server { get; set; }
 
-    public void Stop()
+    public bool IsRunning { get; private set; }
+
+    public async Task StopAsync()
     {
-        Server.Stop();
+        await Server.Stop().ConfigureAwait(false);
     }
 
     public async Task StartAsync()
@@ -43,6 +45,4 @@ internal class DnsServer
         await Server.StartAsync().ConfigureAwait(false);
         IsRunning = Server.IsRunning;
     }
-
-    public bool IsRunning { get; private set; }
 }

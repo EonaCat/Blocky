@@ -14,19 +14,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
 */
+
 using System;
 using System.IO;
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public class DnsStreamBase
 {
-    public class DnsStreamBase
-    {
-        protected static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    protected const int MaxPointerLength = 16383;
+    protected static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        protected const int MaxPointerLength = 16383;
-
-        protected Stream Stream;
-        protected int Position { get; set; }
-        internal int CurrentPosition => Position;
-    }
+    protected Stream Stream;
+    protected int Position { get; set; }
+    internal int CurrentPosition => Position;
 }

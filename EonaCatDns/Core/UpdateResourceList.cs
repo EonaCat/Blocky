@@ -15,58 +15,57 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records;
 using System;
 using System.Collections.Generic;
+using EonaCat.Dns.Core.Records;
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public class UpdateResourceList : List<ResourceRecord>
 {
-    public class UpdateResourceList : List<ResourceRecord>
+    public UpdateResourceList AddResource(ResourceRecord resource)
     {
-        public UpdateResourceList AddResource(ResourceRecord resource)
-        {
-            Add(resource);
-            return this;
-        }
+        Add(resource);
+        return this;
+    }
 
-        public UpdateResourceList DeleteResource(ResourceRecord resource)
-        {
-            resource.Class = RecordClass.None;
-            resource.Ttl = TimeSpan.Zero;
-            Add(resource);
-            return this;
-        }
+    public UpdateResourceList DeleteResource(ResourceRecord resource)
+    {
+        resource.Class = RecordClass.None;
+        resource.Ttl = TimeSpan.Zero;
+        Add(resource);
+        return this;
+    }
 
-        public UpdateResourceList DeleteResource(DomainName name)
+    public UpdateResourceList DeleteResource(DomainName name)
+    {
+        var resource = new ResourceRecord
         {
-            var resource = new ResourceRecord
-            {
-                Name = name,
-                Class = RecordClass.Any,
-                Type = RecordType.Any,
-                Ttl = TimeSpan.Zero
-            };
-            Add(resource);
-            return this;
-        }
+            Name = name,
+            Class = RecordClass.Any,
+            Type = RecordType.Any,
+            Ttl = TimeSpan.Zero
+        };
+        Add(resource);
+        return this;
+    }
 
-        public UpdateResourceList DeleteResource(DomainName name, RecordType type)
+    public UpdateResourceList DeleteResource(DomainName name, RecordType type)
+    {
+        var resource = new ResourceRecord
         {
-            var resource = new ResourceRecord
-            {
-                Name = name,
-                Class = RecordClass.Any,
-                Type = type,
-                Ttl = TimeSpan.Zero
-            };
-            Add(resource);
-            return this;
-        }
+            Name = name,
+            Class = RecordClass.Any,
+            Type = type,
+            Ttl = TimeSpan.Zero
+        };
+        Add(resource);
+        return this;
+    }
 
-        public UpdateResourceList DeleteResource<T>(DomainName name)
-             where T : ResourceRecord, new()
-        {
-            return DeleteResource(name, new T().Type);
-        }
+    public UpdateResourceList DeleteResource<T>(DomainName name)
+        where T : ResourceRecord, new()
+    {
+        return DeleteResource(name, new T().Type);
     }
 }

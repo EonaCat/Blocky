@@ -16,16 +16,16 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Core;
-using EonaCat.Dns.Database;
-using EonaCat.Dns.Database.Models.Entities;
-using EonaCat.Helpers.Helpers;
-using EonaCat.Json;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using EonaCat.Dns.Core;
+using EonaCat.Dns.Database;
+using EonaCat.Dns.Database.Models.Entities;
 using EonaCat.Dns.Exceptions;
 using EonaCat.Dns.Managers.Stats;
+using EonaCat.Helpers.Helpers;
+using EonaCat.Json;
 
 namespace EonaCat.Dns.Managers;
 
@@ -37,6 +37,37 @@ public class StatsManagerApi
     {
         _statsManager = statsManager;
     }
+
+    public static string QueryType1Color { get; set; }
+    public static string QueryType2Color { get; set; }
+    public static string QueryType3Color { get; set; }
+    public static string QueryType4Color { get; set; }
+    public static string QueryType5Color { get; set; }
+    public static string QueryType6Color { get; set; }
+    public static string QueryType7Color { get; set; }
+    public static string QueryType8Color { get; set; }
+    public static string QueryType9Color { get; set; }
+    public static string QueryType10Color { get; set; }
+
+    public static string Transparency => "50";
+
+    public static string ClientsBorderColor { get; set; }
+    public static string ClientsBackgroundColor { get; set; }
+    public static string BlockedBorderColor { get; set; }
+    public static string BlockedBackgroundColor { get; set; }
+    public static string AllowedBackgroundColor { get; set; }
+    public static string RefusedBorderColor { get; set; }
+    public static string RefusedBackgroundColor { get; set; }
+    public static string NameErrorBorderColor { get; set; }
+    public static string NameErrorBackgroundColor { get; set; }
+    public static string ServerFailureBorderColor { get; set; }
+    public static string ServerFailureBackgroundColor { get; set; }
+    public static string CachedBorderColor { get; set; }
+    public static string CachedBackgroundColor { get; set; }
+    public static string NoErrorBorderColor { get; set; }
+    public static string NoErrorBackgroundColor { get; set; }
+    public static string TotalQueriesBorderColor { get; set; }
+    public static string TotalQueriesBackgroundColor { get; set; }
 
     internal static async Task LoadStatsColorsAsync()
     {
@@ -86,14 +117,18 @@ public class StatsManagerApi
         await SetColorAsync(SettingName.RefusedBorderColor, v => RefusedBorderColor = v).ConfigureAwait(false);
         await SetColorAsync(SettingName.RefusedBackgroundColor, v => RefusedBackgroundColor = v).ConfigureAwait(false);
         await SetColorAsync(SettingName.NameErrorBorderColor, v => NameErrorBorderColor = v).ConfigureAwait(false);
-        await SetColorAsync(SettingName.NameErrorBackgroundcolor, v => NameErrorBackgroundColor = v).ConfigureAwait(false);
-        await SetColorAsync(SettingName.ServerFailureBackgroundColor, v => ServerFailureBackgroundColor = v).ConfigureAwait(false);
+        await SetColorAsync(SettingName.NameErrorBackgroundcolor, v => NameErrorBackgroundColor = v)
+            .ConfigureAwait(false);
+        await SetColorAsync(SettingName.ServerFailureBackgroundColor, v => ServerFailureBackgroundColor = v)
+            .ConfigureAwait(false);
         await SetColorAsync(SettingName.CachedBorderColor, v => CachedBorderColor = v).ConfigureAwait(false);
         await SetColorAsync(SettingName.CachedBackgroundColor, v => CachedBackgroundColor = v).ConfigureAwait(false);
         await SetColorAsync(SettingName.NoErrorBorderColor, v => NoErrorBorderColor = v).ConfigureAwait(false);
         await SetColorAsync(SettingName.NoErrorBackgroundColor, v => NoErrorBackgroundColor = v).ConfigureAwait(false);
-        await SetColorAsync(SettingName.TotalQueriesBorderColor, v => TotalQueriesBorderColor = v).ConfigureAwait(false);
-        await SetColorAsync(SettingName.TotalQueriesBackgroundColor, v => TotalQueriesBackgroundColor = v).ConfigureAwait(false);
+        await SetColorAsync(SettingName.TotalQueriesBorderColor, v => TotalQueriesBorderColor = v)
+            .ConfigureAwait(false);
+        await SetColorAsync(SettingName.TotalQueriesBackgroundColor, v => TotalQueriesBackgroundColor = v)
+            .ConfigureAwait(false);
 
         await SetColorAsync(SettingName.QueryType1Color, v => QueryType1Color = v).ConfigureAwait(false);
         await SetColorAsync(SettingName.QueryType2Color, v => QueryType2Color = v).ConfigureAwait(false);
@@ -110,12 +145,11 @@ public class StatsManagerApi
     private static async Task SaveSettingsIfNotExistAsync(List<Setting> settings)
     {
         foreach (var setting in settings)
-        {
-            if (await DatabaseManager.Settings.CountAllAsync(x => x.Name == setting.Name.ToUpper()).ConfigureAwait(false) == 0)
+            if (await DatabaseManager.Settings.CountAllAsync(x => x.Name == setting.Name.ToUpper())
+                    .ConfigureAwait(false) == 0)
             {
                 await DatabaseManager.SetSettingAsync(setting).ConfigureAwait(false);
             }
-        }
     }
 
     private static async Task SetColorAsync(string settingName, Action<string> setter)
@@ -124,7 +158,8 @@ public class StatsManagerApi
         setter(setting.Value);
     }
 
-    internal Task<IDictionary<string, List<StatsLog>>> GetStatsAsync(string type, JsonTextWriter jsonWriter, bool isAuthenticated, bool forceNew)
+    internal Task<IDictionary<string, List<StatsLog>>> GetStatsAsync(string type, JsonTextWriter jsonWriter,
+        bool isAuthenticated, bool forceNew)
     {
         type = string.IsNullOrEmpty(type) ? "lastHour" : type;
         var statsType = EnumHelper<StatsType>.Parse(type, true, StatsType.Invalid);
@@ -137,35 +172,4 @@ public class StatsManagerApi
         forceNew = forceNew || statsType == StatsType.LastHour;
         return _statsManager.GetStatsDataAsync(statsType, forceNew, isAuthenticated);
     }
-
-    public static string QueryType1Color { get; set; }
-    public static string QueryType2Color { get; set; }
-    public static string QueryType3Color { get; set; }
-    public static string QueryType4Color { get; set; }
-    public static string QueryType5Color { get; set; }
-    public static string QueryType6Color { get; set; }
-    public static string QueryType7Color { get; set; }
-    public static string QueryType8Color { get; set; }
-    public static string QueryType9Color { get; set; }
-    public static string QueryType10Color { get; set; }
-
-    public static string Transparency => "50";
-
-    public static string ClientsBorderColor { get; set; }
-    public static string ClientsBackgroundColor { get; set; }
-    public static string BlockedBorderColor { get; set; }
-    public static string BlockedBackgroundColor { get; set; }
-    public static string AllowedBackgroundColor { get; set; }
-    public static string RefusedBorderColor { get; set; }
-    public static string RefusedBackgroundColor { get; set; }
-    public static string NameErrorBorderColor { get; set; }
-    public static string NameErrorBackgroundColor { get; set; }
-    public static string ServerFailureBorderColor { get; set; }
-    public static string ServerFailureBackgroundColor { get; set; }
-    public static string CachedBorderColor { get; set; }
-    public static string CachedBackgroundColor { get; set; }
-    public static string NoErrorBorderColor { get; set; }
-    public static string NoErrorBackgroundColor { get; set; }
-    public static string TotalQueriesBorderColor { get; set; }
-    public static string TotalQueriesBackgroundColor { get; set; }
 }

@@ -16,11 +16,11 @@ limitations under the License
 
 */
 
+using System.Collections.Generic;
+using System.Text;
 using EonaCat.Dns.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Text;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -30,7 +30,9 @@ public class ControllerBase : Controller
 
     protected IndexViewModel GetIndexModel()
     {
-        ViewBag.Title = !DllInfo.HideVersion ? $"{DllInfo.ApplicationName} - {DllInfo.ApplicationVersion}" : $"{DllInfo.ApplicationName}";
+        ViewBag.Title = !DllInfo.HideVersion
+            ? $"{DllInfo.ApplicationName} - {DllInfo.ApplicationVersion}"
+            : $"{DllInfo.ApplicationName}";
 
         var model = new IndexViewModel
         {
@@ -42,13 +44,15 @@ public class ControllerBase : Controller
         };
 
         // Extra security check
-        model.IsLoggedIn = model.IsLoggedIn && UserTokens.ContainsKey(model.Token!) && UserTokens[model.Token] == model.Username;
+        model.IsLoggedIn = model.IsLoggedIn && UserTokens.ContainsKey(model.Token!) &&
+                           UserTokens[model.Token] == model.Username;
 
         if (!model.IsLoggedIn)
-        {
             // Clear all the userData
+        {
             model = new IndexViewModel();
         }
+
         return model;
     }
 

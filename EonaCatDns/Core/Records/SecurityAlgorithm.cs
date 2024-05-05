@@ -15,42 +15,41 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public enum SecurityAlgorithm : byte
 {
-    public enum SecurityAlgorithm : byte
-    {
-        Delete = 0,
+    Delete = 0,
 
-        Rsamd5 = 1,
+    Rsamd5 = 1,
 
-        Dh = 2,
+    Dh = 2,
 
-        Dsa = 3,
+    Dsa = 3,
 
-        Rsasha1 = 5,
+    Rsasha1 = 5,
 
-        Dsansec3Sha1 = 6,
+    Dsansec3Sha1 = 6,
 
-        Rsasha1Nsec3Sha1 = 7,
+    Rsasha1Nsec3Sha1 = 7,
 
-        Rsasha256 = 8,
+    Rsasha256 = 8,
 
-        Rsasha512 = 10,
+    Rsasha512 = 10,
 
-        Eccgost = 12,
+    Eccgost = 12,
 
-        Ecdsap256Sha256 = 13,
+    Ecdsap256Sha256 = 13,
 
-        Ecdsap384Sha384 = 14,
+    Ecdsap384Sha384 = 14,
 
-        Ed25519 = 15,
+    Ed25519 = 15,
 
-        Ed448 = 16,
+    Ed448 = 16,
 
-        Indirect = 252,
+    Indirect = 252,
 
-        Privatedns = 253,
+    Privatedns = 253,
 
-        Privateoid = 254,
-    }
+    Privateoid = 254
 }

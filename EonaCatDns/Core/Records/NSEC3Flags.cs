@@ -17,11 +17,10 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+[Flags]
+public enum Nsec3Flags : byte
 {
-    [Flags]
-    public enum Nsec3Flags : byte
-    {
-        OptOut = 1,
-    }
+    OptOut = 1
 }

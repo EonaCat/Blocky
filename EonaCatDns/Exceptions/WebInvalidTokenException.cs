@@ -25,8 +25,6 @@ namespace EonaCat.Dns.Exceptions;
 [Serializable]
 internal class WebInvalidTokenException : Exception
 {
-    public HttpStatusCode StatusCode { get; }
-
     public WebInvalidTokenException()
     {
         StatusCode = HttpStatusCode.Forbidden;
@@ -46,4 +44,6 @@ internal class WebInvalidTokenException : Exception
     {
         StatusCode = HttpStatusCode.Forbidden;
     }
+
+    public HttpStatusCode StatusCode { get; }
 }

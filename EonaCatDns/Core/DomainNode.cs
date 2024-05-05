@@ -15,22 +15,21 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records;
 using System.Collections.Generic;
+using EonaCat.Dns.Core.Records;
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public class DomainNode
 {
-    public class DomainNode
+    public DomainName Name { get; set; } = DomainName.Root;
+
+    public HashSet<ResourceRecord> Resources { get; set; } = new();
+
+    public bool IsAuthoritative { get; set; }
+
+    public override string ToString()
     {
-        public DomainName Name { get; set; } = DomainName.Root;
-
-        public override string ToString()
-        {
-            return Name.ToString();
-        }
-
-        public HashSet<ResourceRecord> Resources { get; set; } = new();
-
-        public bool IsAuthoritative { get; set; }
+        return Name.ToString();
     }
 }

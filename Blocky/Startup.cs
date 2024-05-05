@@ -15,116 +15,112 @@ See the License for the specific language governing permissions and
 limitations under the License
 
 */
+
+using System;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using WebMarkupMin.AspNetCore7;
+using WebMarkupMin.AspNetCore6;
 
-namespace EonaCat.Blocky
+namespace EonaCat.Blocky;
+// Blocky
+// Blocking domains the way you want it.
+// Copyright EonaCat (Jeroen Saey) 2017-2023
+// https://blocky.EonaCat.com
+
+public class Startup
 {
-    // Blocky
-    // Blocking domains the way you want it.
-    // Copyright EonaCat (Jeroen Saey) 2017-2023
-    // https://blocky.EonaCat.com
-
-    public class Startup
+    public Startup(IConfiguration configuration)
     {
-        public Startup(IConfiguration configuration)
+        AppInfo.Configuration = configuration;
+    }
+
+    //  This method gets called by the runtime. Use this method to add services to the container.
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<CookiePolicyOptions>(options =>
         {
-            AppInfo.Configuration = configuration;
-        }
+            //  This lambda determines whether user consent for non-essential cookies is needed for a given request.
+            options.CheckConsentNeeded = context => true;
+            options.MinimumSameSitePolicy = SameSiteMode.None;
+        });
 
-        //  This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        services.AddLogging(config =>
         {
-            services.Configure<CookiePolicyOptions>(options =>
+            // clear out default configuration
+            config.ClearProviders();
+            config.AddDebug();
+            config.AddEventSourceLogger();
+
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == Environments.Development)
             {
-                //  This lambda determines whether user consent for non-essential cookies is needed for a given request.
-                options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = SameSiteMode.None;
-            });
-
-            services.AddLogging(config =>
-            {
-                // clear out default configuration
-                config.ClearProviders();
-                config.AddDebug();
-                config.AddEventSourceLogger();
-
-                if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == Environments.Development)
-                {
-                    config.AddConsole();
-                }
-            });
-
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
-
-            services.AddWebMarkupMin(
-                    options =>
-                    {
-                        options.AllowMinificationInDevelopmentEnvironment = true;
-                        options.AllowCompressionInDevelopmentEnvironment = true;
-                    })
-                .AddHtmlMinification(
-                    options =>
-                    {
-                        options.MinificationSettings.RemoveRedundantAttributes = true;
-                        options.MinificationSettings.RemoveHttpProtocolFromAttributes = true;
-                        options.MinificationSettings.RemoveHttpsProtocolFromAttributes = true;
-                    })
-                .AddHttpCompression();
-
-            services.AddResponseCompression(options => {
-                options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-                    new[] { "text/javascript" }
-                );
-            });
-
-            services.AddSignalR();
-        }
-
-        //  This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
+                config.AddConsole();
             }
-            else
-            {
-                app.UseExceptionHandler("/BlockyIndex/Error");
-                app.UseHsts();
-            }
+        });
 
-            app.UseStaticFiles();
-            app.UseWebMarkupMin();
-
-            app.UseRouting();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllerRoute(
-                    name: "blocky",
-                    pattern: "{controller=BlockyIndex}/{action=BlockyIndex}/{id?}");
-                endpoints.MapControllerRoute(
-                    name: "ad",
-                    pattern: "{controller=Ad}/{action=Index}/{id?}");
-                endpoints.MapHub<BlockyHub>("/blockyHub", options =>
+        services.AddWebMarkupMin(
+                options =>
                 {
-                    options.Transports = HttpTransportType.LongPolling;
-                });
-            });
+                    options.AllowMinificationInDevelopmentEnvironment = true;
+                    options.AllowCompressionInDevelopmentEnvironment = true;
+                })
+            .AddHtmlMinification(
+                options =>
+                {
+                    options.MinificationSettings.RemoveRedundantAttributes = true;
+                    options.MinificationSettings.RemoveHttpProtocolFromAttributes = true;
+                    options.MinificationSettings.RemoveHttpsProtocolFromAttributes = true;
+                })
+            .AddHttpCompression();
 
-            app.SetBaseUrl();
+        services.AddResponseCompression(options =>
+        {
+            options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+                new[] { "text/javascript" }
+            );
+        });
+
+        services.AddSignalR();
+        services.AddControllersWithViews();
+    }
+
+    //  This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
         }
+        else
+        {
+            app.UseExceptionHandler("/BlockyIndex/Error");
+            app.UseHsts();
+        }
+
+        app.UseStaticFiles();
+        app.UseWebMarkupMin();
+
+        app.UseRouting();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllerRoute(
+                "blocky",
+                "{controller=BlockyIndex}/{action=BlockyIndex}/{id?}");
+            endpoints.MapControllerRoute(
+                "ad",
+                "{controller=Ad}/{action=Index}/{id?}");
+            endpoints.MapHub<BlockyHub>("/blockyHub",
+                options => { options.Transports = HttpTransportType.LongPolling; });
+        });
+
+        app.SetBaseUrl();
     }
 }

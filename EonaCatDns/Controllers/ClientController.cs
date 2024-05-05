@@ -16,12 +16,12 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Database;
-using EonaCat.Dns.Models;
-using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
+using EonaCat.Dns.Database;
 using EonaCat.Dns.Database.Models.Entities;
+using EonaCat.Dns.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -46,8 +46,26 @@ public class ClientController : ControllerBase
 
         if (!string.IsNullOrEmpty(search))
         {
-            query = query.Where(a => (a.Ip != null && a.Ip.ToLower().Contains(search)) ||
-                                     (a.Name != null && a.Name.ToLower().Contains(search)));
+            if (search.StartsWith("*") && search.EndsWith("*"))
+            {
+                query = query.Where(a => (a.Ip != null && a.Ip.ToLower().Contains(search)) ||
+                                         (a.Name != null && a.Name.ToLower().Contains(search)));
+            }
+            else if (search.StartsWith("*"))
+            {
+                query = query.Where(a => (a.Ip != null && a.Ip.ToLower().EndsWith(search)) ||
+                                         (a.Name != null && a.Name.ToLower().EndsWith(search)));
+            }
+            else if (search.EndsWith("*"))
+            {
+                query = query.Where(a => (a.Ip != null && a.Ip.ToLower().StartsWith(search)) ||
+                                         (a.Name != null && a.Name.ToLower().StartsWith(search)));
+            }
+            else
+            {
+                query = query.Where(a => (a.Ip != null && a.Ip.ToLower().Equals(search)) ||
+                                         (a.Name != null && a.Name.ToLower().Equals(search)));
+            }
         }
 
         var totalRecords = await query.CountAsync().ConfigureAwait(false);
@@ -66,13 +84,19 @@ public class ClientController : ControllerBase
         switch (dataTablesRequest.SortColumn)
         {
             case 0:
-                result = isAscending ? result.OrderBy(x => x.Ip).ToList() : result.OrderByDescending(x => x.Ip).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Ip).ToList()
+                    : result.OrderByDescending(x => x.Ip).ToList();
                 break;
             case 1:
-                result = isAscending ? result.OrderBy(x => x.IsBlocked).ToList() : result.OrderByDescending(x => x.IsBlocked).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.IsBlocked).ToList()
+                    : result.OrderByDescending(x => x.IsBlocked).ToList();
                 break;
             case 2:
-                result = isAscending ? result.OrderBy(x => x.Name).ToList() : result.OrderByDescending(x => x.Name).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Name).ToList()
+                    : result.OrderByDescending(x => x.Name).ToList();
                 break;
         }
 
@@ -100,9 +124,13 @@ public class ClientController : ControllerBase
             return null;
         }
 
-        if (string.IsNullOrEmpty(client.Ip)) return RedirectToAction("Index");
+        if (string.IsNullOrEmpty(client.Ip))
+        {
+            return RedirectToAction("Index");
+        }
 
-        var databaseClient = await DatabaseManager.Clients.FirstOrDefaultAsync(x => x.Ip.Equals(client.Ip)).ConfigureAwait(false);
+        var databaseClient = await DatabaseManager.Clients.FirstOrDefaultAsync(x => x.Ip.Equals(client.Ip))
+            .ConfigureAwait(false);
         if (databaseClient != null)
         {
             databaseClient.IsBlocked = client.IsBlocked;
@@ -137,7 +165,9 @@ public class ClientController : ControllerBase
 
         ClientViewModel model = null;
 
-        var client = isNew ? null : await DatabaseManager.Clients.FirstOrDefaultAsync(x => x.Ip.Equals(ip)).ConfigureAwait(false);
+        var client = isNew
+            ? null
+            : await DatabaseManager.Clients.FirstOrDefaultAsync(x => x.Ip.Equals(ip)).ConfigureAwait(false);
 
         if (client != null)
         {

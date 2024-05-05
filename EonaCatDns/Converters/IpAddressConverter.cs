@@ -16,9 +16,9 @@ limitations under the License
 
 */
 
-using EonaCat.Json;
 using System;
 using System.Net;
+using EonaCat.Json;
 
 namespace EonaCat.Dns.Converters;
 

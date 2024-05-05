@@ -16,12 +16,12 @@ limitations under the License
 
 */
 
+using System.Linq;
+using System.Threading.Tasks;
 using EonaCat.Dns.Database;
 using EonaCat.Dns.Database.Models.Entities;
 using EonaCat.Dns.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -52,7 +52,22 @@ public class CategoryController : ControllerBase
             }
             else
             {
-                query = query.Where(a => a.Name != null && a.Name.ToLower().Contains(search));
+                if (search.StartsWith("*") && search.EndsWith("*"))
+                {
+                    query = query.Where(a => a.Name != null && a.Name.ToLower().Contains(search));
+                }
+                else if (search.StartsWith("*"))
+                {
+                    query = query.Where(a => a.Name != null && a.Name.ToLower().EndsWith(search));
+                }
+                else if (search.EndsWith("*"))
+                {
+                    query = query.Where(a => a.Name != null && a.Name.ToLower().StartsWith(search));
+                }
+                else
+                {
+                    query = query.Where(a => a.Name != null && a.Name.ToLower().Equals(search));
+                }
             }
         }
 
@@ -72,13 +87,19 @@ public class CategoryController : ControllerBase
         switch (dataTablesRequest.SortColumn)
         {
             case 0:
-                result = isAscending ? result.OrderBy(x => x.Id).ToList() : result.OrderByDescending(x => x.Id).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Id).ToList()
+                    : result.OrderByDescending(x => x.Id).ToList();
                 break;
             case 1:
-                result = isAscending ? result.OrderBy(x => x.Name).ToList() : result.OrderByDescending(x => x.Name).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Name).ToList()
+                    : result.OrderByDescending(x => x.Name).ToList();
                 break;
             case 2:
-                result = isAscending ? result.OrderBy(x => x.Domains).ToList() : result.OrderByDescending(x => x.Domains).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Domains).ToList()
+                    : result.OrderByDescending(x => x.Domains).ToList();
                 break;
         }
 
@@ -110,7 +131,8 @@ public class CategoryController : ControllerBase
         var isNew = category.Id == 0;
         if (!isNew)
         {
-            databaseCategory = await DatabaseManager.Categories.FirstOrDefaultAsync(x => x.Id == category.Id).ConfigureAwait(false);
+            databaseCategory = await DatabaseManager.Categories.FirstOrDefaultAsync(x => x.Id == category.Id)
+                .ConfigureAwait(false);
         }
 
         if (databaseCategory != null)
@@ -139,10 +161,12 @@ public class CategoryController : ControllerBase
             return null;
         }
 
-        int.TryParse(id, out var categoryId);
+        _ = int.TryParse(id, out var categoryId);
         var isNew = categoryId == 0;
 
-        var category = isNew ? null : await DatabaseManager.Categories.FirstOrDefaultAsync(x => x.Id == categoryId).ConfigureAwait(false);
+        var category = isNew
+            ? null
+            : await DatabaseManager.Categories.FirstOrDefaultAsync(x => x.Id == categoryId).ConfigureAwait(false);
 
         CategoryViewModel model = null;
 
@@ -171,13 +195,14 @@ public class CategoryController : ControllerBase
             return null;
         }
 
-        int.TryParse(id, out var categoryId);
+        _ = int.TryParse(id, out var categoryId);
         if (categoryId <= 0)
         {
             return RedirectToAction("Index");
         }
 
-        var category = await DatabaseManager.Categories.FirstOrDefaultAsync(x => x.Id == categoryId).ConfigureAwait(false);
+        var category = await DatabaseManager.Categories.FirstOrDefaultAsync(x => x.Id == categoryId)
+            .ConfigureAwait(false);
         if (category != null)
         {
             await DatabaseManager.Categories.DeleteAsync(category).ConfigureAwait(false);

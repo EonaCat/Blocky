@@ -15,18 +15,17 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public enum DigestType : byte
 {
-    public enum DigestType : byte
-    {
-        Sha1 = 1,
+    Sha1 = 1,
 
-        Sha256 = 2,
+    Sha256 = 2,
 
-        GostR341194 = 3,
+    GostR341194 = 3,
 
-        Sha384 = 4,
+    Sha384 = 4,
 
-        Sha512 = 5,
-    }
+    Sha512 = 5
 }

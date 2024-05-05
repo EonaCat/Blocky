@@ -19,36 +19,36 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace EonaCat.Dns.Core.Records.Registry
+namespace EonaCat.Dns.Core.Records.Registry;
+
+public static class DigestRegistry
 {
-    public static class DigestRegistry
+    public static Dictionary<DigestType, Func<HashAlgorithm>> Digests;
+
+    static DigestRegistry()
     {
-        public static Dictionary<DigestType, Func<HashAlgorithm>> Digests;
-
-        static DigestRegistry()
+        Digests = new Dictionary<DigestType, Func<HashAlgorithm>>
         {
-            Digests = new Dictionary<DigestType, Func<HashAlgorithm>>
-            {
-                { DigestType.Sha1, SHA1.Create },
-                { DigestType.Sha256, SHA256.Create },
-                { DigestType.Sha384, SHA384.Create },
-                { DigestType.Sha512, SHA512.Create }
-            };
+            { DigestType.Sha1, SHA1.Create },
+            { DigestType.Sha256, SHA256.Create },
+            { DigestType.Sha384, SHA384.Create },
+            { DigestType.Sha512, SHA512.Create }
+        };
+    }
+
+    public static HashAlgorithm Create(DigestType digestType)
+    {
+        if (Digests.TryGetValue(digestType, out var create))
+        {
+            return create();
         }
 
-        public static HashAlgorithm Create(DigestType digestType)
-        {
-            if (Digests.TryGetValue(digestType, out var create))
-            {
-                return create();
-            }
-            throw new NotImplementedException("EonaCatDns: " + $"Digest type '{digestType}' is not implemented.");
-        }
+        throw new NotImplementedException("EonaCatDns: " + $"Digest type '{digestType}' is not implemented.");
+    }
 
-        public static HashAlgorithm Create(SecurityAlgorithm algorithm)
-        {
-            var metadata = SecurityAlgorithmRegistry.GetMetadata(algorithm);
-            return Create(metadata.HashAlgorithm);
-        }
+    public static HashAlgorithm Create(SecurityAlgorithm algorithm)
+    {
+        var metadata = SecurityAlgorithmRegistry.GetMetadata(algorithm);
+        return Create(metadata.HashAlgorithm);
     }
 }

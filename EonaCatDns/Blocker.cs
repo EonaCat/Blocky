@@ -1,21 +1,11 @@
-﻿/*
-EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License
-
-*/
-
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using EonaCat.Dns.Core;
 using EonaCat.Dns.Database;
 using EonaCat.Dns.Database.Models.Entities;
@@ -24,22 +14,24 @@ using EonaCat.Helpers.Commands;
 using EonaCat.Helpers.Controls;
 using EonaCat.Helpers.Extensions;
 using EonaCat.Logger;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using BlockList = EonaCat.Dns.Database.Models.Entities.BlockList;
 
 namespace EonaCat.Dns;
 
 internal class Blocker : IDisposable
 {
-    public static event EventHandler OnUpdateSetup;
-    public static event EventHandler OnBlockListCountRetrieved;
-    private readonly LinkedList<BlockListItem> _blockListUpdateQueue = new();
+    private readonly ConcurrentQueue<BlockListItem> _blockListUpdateQueue = new();
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly SemaphoreSlim _queueLock = new(1, 1);
+
+    private EonaCatTimer _updateDataTimer;
+
+    public Blocker()
+    {
+        BindEvents();
+        Task.Run(ProcessBlockListQueueAsync, _cancellationTokenSource.Token);
+    }
+
     internal static BlockedSetup Setup { get; set; }
     public static bool UpdateBlockList { get; internal set; }
     public static bool UpdateSetup { get; internal set; }
@@ -48,47 +40,52 @@ internal class Blocker : IDisposable
     public static int TotalBlocked { get; private set; }
     public static int TotalAllowed { get; private set; }
 
-    public Blocker()
-    {
-        CreateBlockerQueue();
-    }
+    public static ConcurrentBag<TaskItem> RunningBlockerTasks { get; } = new();
 
-    private void CreateBlockerQueue()
-    {
-        Task.Run(async () =>
-        {
-            RunningBlockerTasks = new ConcurrentBag<TaskItem>();
-            while (!IsDisposed)
-            {
-                try
-                {
-                    var queue = new List<BlockListItem>(_blockListUpdateQueue);
-                    if (!queue.Any())
-                    {
-                        await Task.Delay(5000).ConfigureAwait(false);
-                        continue;
-                    }
+    public static bool ProgressToConsole { get; set; }
 
-                    foreach (var item in queue)
-                    {
-                        await ProcessBlockListFromQueueAsync(item.Entries, item.RedirectionAddress).ConfigureAwait(false);
-                        _blockListUpdateQueue.Remove(item);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(ex);
-                }
-                await Task.Delay(100).ConfigureAwait(false);
-            }
-        });
-    }
-
-    public static ConcurrentBag<TaskItem> RunningBlockerTasks { get; private set; } = new();
+    public static HashSet<string> AllowList { get; private set; }
 
     public void Dispose()
     {
         Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void BindEvents()
+    {
+        DatabaseManager.Domains.OnEntityInsertedOrUpdated += Domains_OnEntityInsertedOrUpdated;
+    }
+
+    public void UnbindEvents()
+    {
+        DatabaseManager.Domains.OnEntityInsertedOrUpdated += Domains_OnEntityInsertedOrUpdated;
+    }
+
+    private async void Domains_OnEntityInsertedOrUpdated(object sender, Domain e)
+    {
+        await GetBlockListCountFromDatabaseAsync().ConfigureAwait(false);
+    }
+
+    public static event EventHandler OnUpdateSetup;
+    public static event EventHandler OnBlockListCountRetrieved;
+
+    private async Task ProcessBlockListQueueAsync()
+    {
+        while (!_cancellationTokenSource.Token.IsCancellationRequested)
+            try
+            {
+                while (_blockListUpdateQueue.TryDequeue(out var item))
+                    await ProcessBlockListFromQueueAsync(item.Entries, item.RedirectionAddress).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                await Logger.LogAsync(ex).ConfigureAwait(false);
+            }
     }
 
     private static async Task ProcessBlockListFromQueueAsync(IEnumerable<Uri> blockedEntries, string address)
@@ -100,133 +97,112 @@ internal class Blocker : IDisposable
 
         AllowList = await DatabaseManager.GetAllowedDomainsAsync().ConfigureAwait(false);
 
-        var entryUrls = blockedEntries.ToList();
-        foreach (var entryUrl in entryUrls)
+        var entries = blockedEntries as Uri[] ?? blockedEntries.ToArray();
+        var tasks = entries.Select(blockedEntry => ProcessBlockListEntryAsync(blockedEntry, address, blockListsFolder))
+            .ToList();
+
+        await Logger.LogAsync($"Added {entries.Length} Blocked urls for downloading", ELogType.DEBUG)
+            .ConfigureAwait(false);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+    }
+
+    private static async Task ProcessBlockListEntryAsync(Uri entryUrl, string address, string blockListsFolder)
+    {
+        try
         {
-            try
+            var currentBlockList = await DatabaseManager.BlockLists
+                                       .FirstOrDefaultAsync(x => x.Url == entryUrl.AbsoluteUri).ConfigureAwait(false) ??
+                                   new BlockList
+                                   {
+                                       CreationDate = DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                                       IsEnabled = true,
+                                       Name = entryUrl.AbsoluteUri,
+                                       Url = entryUrl.AbsoluteUri
+                                   };
+
+            if (!currentBlockList.IsEnabled ||
+                (DateTime.TryParse(currentBlockList.LastUpdated, out var dateTime) &&
+                 dateTime > DateTime.Now.AddMinutes(-10)))
             {
-                // Get the blockList from the database (if exists)
-                var currentBlockList = await DatabaseManager.BlockLists
-                    .FirstOrDefaultAsync(x => x.Url == entryUrl.AbsoluteUri)
-                    .ConfigureAwait(false);
-
-                if (currentBlockList == null)
-                {
-                    currentBlockList = new Database.Models.Entities.BlockList
-                    {
-                        CreationDate = DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                        IsEnabled = true,
-                        Name = entryUrl.AbsoluteUri,
-                        Url = entryUrl.AbsoluteUri
-                    };
-                    await DatabaseManager.BlockLists.InsertOrUpdateAsync(currentBlockList).ConfigureAwait(false);
-                }
-
-                // Check if the task was recently updated
-
-                if (!currentBlockList.IsEnabled ||
-                    DateTime.TryParse(currentBlockList.LastUpdated, out var dateTime) &&
-                    dateTime.Ticks > DateTime.Now.AddMinutes(-10).Ticks)
-                {
-                    Logger.Log(currentBlockList.IsEnabled
+                await Logger.LogAsync(currentBlockList.IsEnabled
                         ? $"Current blockList '{currentBlockList.Name}' was already updated in the last 10 minutes"
-                        : $"Current blockList '{currentBlockList.Name}' is not enabled",
-                        ELogType.WARNING);
-                    return;
-                }
-
-                Logger.Log($"Generating download task for {entryUrl.AbsoluteUri}", ELogType.DEBUG);
-
-                var task = new BlockListDownloadTask();
-                var taskItem = new TaskItem
-                {
-                    Uri = entryUrl,
-                    Task = TaskHelper.Create(() => task.GenerateDownloadTaskAsync(address, blockListsFolder, currentBlockList))
-                };
-
-                // start the task
-                RunningBlockerTasks.Add(taskItem);
-                Logger.Log($"Generated download task for {entryUrl.AbsoluteUri}", ELogType.DEBUG);
+                        : $"Current blockList '{currentBlockList.Name}' is not enabled", ELogType.WARNING)
+                    .ConfigureAwait(false);
+                return;
             }
-            catch (ArgumentException argumentException)
+
+            await Logger.LogAsync($"Generating download task for {entryUrl.AbsoluteUri}", ELogType.DEBUG)
+                .ConfigureAwait(false);
+
+            var task = new BlockListDownloadTask();
+            var taskItem = new TaskItem
             {
-                Logger.Log(argumentException.Message, ELogType.WARNING);
-            }
+                Uri = entryUrl,
+                Task = TaskHelper.Create(() =>
+                    task.GenerateDownloadTaskAsync(address, blockListsFolder, currentBlockList,
+                        ProgressToConsole))
+            };
+
+            // Start the task
+            RunningBlockerTasks.Add(taskItem);
+            await Logger.LogAsync($"Generated download task for {entryUrl.AbsoluteUri}", ELogType.DEBUG)
+                .ConfigureAwait(false);
+            await taskItem.Task.ExecuteAsync(null).ConfigureAwait(false);
         }
-
-        Logger.Log($"Added {entryUrls.Count()} Blocked urls for downloading", ELogType.DEBUG);
-
-        // Start all the tasks
-        foreach (var task in RunningBlockerTasks)
+        catch (ArgumentException argumentException)
         {
-            await task.Task.ExecuteAsync(null).ConfigureAwait(false);
+            await Logger.LogAsync(argumentException.Message, ELogType.WARNING).ConfigureAwait(false);
         }
     }
 
-    public bool ProgressToConsole { get; set; }
-
-    internal Task UpdateBlockedEntriesAsync(IEnumerable<BlockListItem> blockListItems)
+    public Task UpdateBlockedEntriesAsync(IEnumerable<BlockListItem> blockListItems)
     {
-        foreach (var entry in blockListItems)
-        {
-            if (!_blockListUpdateQueue.Contains(entry))
-            {
-                _blockListUpdateQueue.AddLast(entry);
-            }
-        }
-
+        foreach (var entry in blockListItems) _blockListUpdateQueue.Enqueue(entry);
         return Task.CompletedTask;
     }
-
-    public static HashSet<string> AllowList { get; private set; }
 
     internal static double GetProgress(int currentItem, int totalItems)
     {
         return (100.0 * currentItem / totalItems).RoundToDecimalPlaces(2);
     }
 
-    internal Task InitialiseAsync(bool autoUpdate = false)
+    public async Task InitialiseAsync(bool autoUpdate = false)
     {
-        UpdateDataTimer = new EonaCatTimer(TimeSpan.FromSeconds(5), TimerCallback);
-        UpdateDataTimer.Start();
+        _updateDataTimer = new EonaCatTimer(TimeSpan.FromSeconds(5), TimerCallback);
+        _updateDataTimer.Start();
 
         EnableAutomaticUpdates(autoUpdate);
-
-        // Initiate the allow list
-        return GetBlockListCountFromDatabaseAsync();
+        await GetBlockListCountFromDatabaseAsync();
+        await WriteDefaultAllowListAsync();
     }
 
 
-    public static void EnableAutomaticUpdates(bool autoUpdate)
+    private static void EnableAutomaticUpdates(bool autoUpdate)
     {
         if (!autoUpdate)
         {
             return;
         }
 
-        // Get the current time to calculate the time remaining until 4:00 AM
         var now = DateTime.Now;
         var next4Am = now.Date.AddHours(4);
 
-        // If it's already past 4:00 AM today, schedule the next occurrence for tomorrow
         if (now >= next4Am)
         {
             next4Am = next4Am.AddDays(1);
         }
 
-        // Calculate the time remaining until the next 4:00 AM
         var timeRemaining = next4Am - now;
-
-        // Set up a timer to execute the method when the time comes
-        var timer = new Timer(_ => StartAutomaticUpdate(now), null, timeRemaining, TimeSpan.FromHours(24));
+        var timer = new Timer(async _ => await StartAutomaticUpdate(now).ConfigureAwait(false), null,
+            timeRemaining, TimeSpan.FromHours(24));
     }
 
-    private static void StartAutomaticUpdate(DateTime currentDateTime)
+    private static async Task StartAutomaticUpdate(DateTime currentDateTime)
     {
         UpdateBlockList = true;
-        Logger.Log($"Automatic blockList updates started at: {currentDateTime.ToLocalTime()}");
+        await Logger.LogAsync($"Automatic blockList updates started at: {currentDateTime.ToLocalTime()}")
+            .ConfigureAwait(false);
     }
-
 
     private async void TimerCallback()
     {
@@ -248,7 +224,7 @@ internal class Blocker : IDisposable
 
     internal async Task WriteDefaultAllowListAsync()
     {
-        Logger.Log("Adding domains to allow");
+        await Logger.LogAsync("Adding domains to allow").ConfigureAwait(false);
 
         var allowedDomains = await DatabaseManager.GetAllowedDomainsAsync().ConfigureAwait(false);
 
@@ -261,7 +237,7 @@ internal class Blocker : IDisposable
 
         await DatabaseManager.Domains.BulkInsertOrUpdateAsync(allowedDomains.Select(domain =>
             new Domain { Url = domain, ForwardIp = domain, ListType = ListType.Allowed })).ConfigureAwait(false);
-        Logger.Log("Domains to allow added");
+        await Logger.LogAsync("Domains to allow added").ConfigureAwait(false);
     }
 
     public static async Task GetBlockListCountFromDatabaseAsync()
@@ -273,9 +249,12 @@ internal class Blocker : IDisposable
 
     private static async Task GetBlockedSetupAsync()
     {
-        var blockedAddressSetting = await DatabaseManager.GetSettingAsync(SettingName.Blockedaddress).ConfigureAwait(false);
+        var blockedAddressSetting =
+            await DatabaseManager.GetSettingAsync(SettingName.Blockedaddress).ConfigureAwait(false);
         var address = string.Empty;
-        var blockList = (await DatabaseManager.BlockLists.GetAll().Where(x => x.IsEnabled).ToArrayAsync().ConfigureAwait(false)).ToHashSet();
+        var blockList =
+            (await DatabaseManager.BlockLists.GetAll().Where(x => x.IsEnabled).ToArrayAsync().ConfigureAwait(false))
+            .ToHashSet();
 
         if (!string.IsNullOrEmpty(blockedAddressSetting.Value))
         {
@@ -296,6 +275,7 @@ internal class Blocker : IDisposable
         {
             var blockedEntries = Setup.Urls.Where(x => x.IsEnabled).Select(x => new Uri(x.Url)).ToList();
             Setup.Urls.Clear();
+
             await UpdateBlockedEntriesAsync(blockedEntries.Select(entry => new BlockListItem
             {
                 Entries = new HashSet<Uri> { entry },
@@ -308,17 +288,20 @@ internal class Blocker : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (!IsDisposed)
+        if (IsDisposed)
         {
-            if (disposing)
-            {
-                // Dispose managed resources
-                UpdateDataTimer?.Stop();
-            }
-
-            // Dispose unmanaged resources
-
-            IsDisposed = true;
+            return;
         }
+
+        // Dispose managed resources
+        if (disposing)
+        {
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
+            _updateDataTimer?.Stop();
+        }
+
+        // Dispose unmanaged resources
+        IsDisposed = true;
     }
 }

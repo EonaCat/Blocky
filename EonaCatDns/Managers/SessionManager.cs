@@ -19,6 +19,7 @@ limitations under the License
 using System;
 using System.Collections.Concurrent;
 using EonaCat.Dns.Exceptions;
+using EonaCat.Dns.Models;
 
 namespace EonaCat.Dns.Managers;
 

@@ -19,65 +19,64 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace EonaCat.Dns.Core.Clients
+namespace EonaCat.Dns.Core.Clients;
+
+internal abstract class DnsClientBase
 {
-    internal abstract class DnsClientBase
+    private int _nextQueryId = new Random().Next(ushort.MaxValue + 1);
+
+    public ushort GetNextQueryId()
     {
-        private int _nextQueryId = new Random().Next(ushort.MaxValue + 1);
+        var next = Interlocked.Increment(ref _nextQueryId);
+        return (ushort)next;
+    }
 
-        public ushort GetNextQueryId()
+    public Task<Message> QueryAsync(
+        string name,
+        RecordType recordType,
+        CancellationToken cancel = default)
+    {
+        var query = new Message
         {
-            var next = Interlocked.Increment(ref _nextQueryId);
-            return (ushort)next;
-        }
-
-        public Task<Message> QueryAsync(
-            string name,
-            RecordType recordType,
-            CancellationToken cancel = default)
-        {
-            var query = new Message
+            Header = new DnsHeader
             {
-                Header = new DnsHeader
-                {
-                    Id = GetNextQueryId(),
-                    IsRecursionDesired = true
-                }
-            };
-            query.Questions.Add(new Question { Name = name, Type = recordType });
+                Id = GetNextQueryId(),
+                IsRecursionDesired = true
+            }
+        };
+        query.Questions.Add(new Question { Name = name, Type = recordType });
 
-            return QueryAsync(query, cancel);
-        }
+        return QueryAsync(query, cancel);
+    }
 
-        public Task<Message> QuerySecureAsync(
-            string name,
-            RecordType recordType,
-            CancellationToken cancel = default)
+    public Task<Message> QuerySecureAsync(
+        string name,
+        RecordType recordType,
+        CancellationToken cancel = default)
+    {
+        var query = new Message
         {
-            var query = new Message
+            Header = new DnsHeader
             {
-                Header = new DnsHeader
-                {
-                    Id = GetNextQueryId(),
-                    IsRecursionDesired = true
-                }
-            }.UseDnsSecurity();
-            query.Questions.Add(new Question { Name = name, Type = recordType });
+                Id = GetNextQueryId(),
+                IsRecursionDesired = true
+            }
+        }.UseDnsSecurity();
+        query.Questions.Add(new Question { Name = name, Type = recordType });
 
-            return QueryAsync(query, cancel);
-        }
+        return QueryAsync(query, cancel);
+    }
 
-        public abstract Task<Message> QueryAsync(
-            Message request,
-            CancellationToken cancel = default);
+    public abstract Task<Message> QueryAsync(
+        Message request,
+        CancellationToken cancel = default);
 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
+    public void Dispose()
+    {
+        Dispose(true);
+    }
 
-        protected virtual void Dispose(bool disposing)
-        {
-        }
+    protected virtual void Dispose(bool disposing)
+    {
     }
 }

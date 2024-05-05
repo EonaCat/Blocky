@@ -15,48 +15,41 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records.Registry;
 using System.Collections.Generic;
+using EonaCat.Dns.Core.Records.Registry;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class EdnsDauOption : EdnsOptionBase
 {
-    public class EdnsDauOption : EdnsOptionBase
+    public EdnsDauOption()
     {
-        public EdnsDauOption()
-        {
-            Type = EdnsOptionType.Dau;
-            Algorithms = new List<SecurityAlgorithm>();
-        }
+        Type = EdnsOptionType.Dau;
+        Algorithms = new List<SecurityAlgorithm>();
+    }
 
-        public List<SecurityAlgorithm> Algorithms { get; set; }
+    public List<SecurityAlgorithm> Algorithms { get; set; }
 
-        public static EdnsDauOption Create()
-        {
-            var option = new EdnsDauOption();
-            option.Algorithms.AddRange(SecurityAlgorithmRegistry.Algorithms.Keys);
-            return option;
-        }
+    public static EdnsDauOption Create()
+    {
+        var option = new EdnsDauOption();
+        option.Algorithms.AddRange(SecurityAlgorithmRegistry.Algorithms.Keys);
+        return option;
+    }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Algorithms.Clear();
-            for (; length > 0; length--)
-            {
-                Algorithms.Add((SecurityAlgorithm)reader.ReadByte());
-            }
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Algorithms.Clear();
+        for (; length > 0; length--) Algorithms.Add((SecurityAlgorithm)reader.ReadByte());
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            foreach (var algorithm in Algorithms)
-            {
-                writer.WriteByte((byte)algorithm);
-            }
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        foreach (var algorithm in Algorithms) writer.WriteByte((byte)algorithm);
+    }
 
-        public override string ToString()
-        {
-            return $";   DAU = {string.Join(", ", Algorithms)}";
-        }
+    public override string ToString()
+    {
+        return $";   DAU = {string.Join(", ", Algorithms)}";
     }
 }

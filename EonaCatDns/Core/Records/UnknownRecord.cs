@@ -15,30 +15,29 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class UnknownRecord : ResourceRecord
 {
-    public class UnknownRecord : ResourceRecord
+    public UnknownRecord()
     {
-        public byte[] Data { get; set; }
+        Type = RecordType.Unknown;
+    }
 
-        public UnknownRecord()
-        {
-            Type = RecordType.Unknown;
-        }
+    public byte[] Data { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Data = reader.ReadBytes(length);
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Data = reader.ReadBytes(length);
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Data = reader.ReadResourceData();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Data = reader.ReadResourceData();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteBytes(Data);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteBytes(Data);
     }
 }

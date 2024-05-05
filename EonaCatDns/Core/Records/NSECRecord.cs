@@ -18,58 +18,52 @@ limitations under the License
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class NsecRecord : ResourceRecord
 {
-    public class NsecRecord : ResourceRecord
+    public NsecRecord()
     {
-        public NsecRecord()
+        Type = RecordType.Nsec;
+    }
+
+    public DomainName NextOwnerName { get; set; } = DomainName.Root;
+
+    public List<RecordType> Types { get; set; } = new();
+
+    public override void ReadData(DnsReader reader, int length)
+    {
+        var end = reader.CurrentPosition + length;
+        NextOwnerName = reader.ReadDomainName();
+        while (reader.CurrentPosition < end) Types.AddRange(reader.ReadBitmap().Select(t => (RecordType)t));
+    }
+
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteDomainName(NextOwnerName, true);
+        writer.WriteBitmap(Types.Select(t => (ushort)t));
+    }
+
+    public override void ReadData(MasterReader reader)
+    {
+        NextOwnerName = reader.ReadDomainName();
+        while (!reader.IsEndOfLine()) Types.Add(reader.ReadDnsType());
+    }
+
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteDomainName(NextOwnerName);
+
+        var next = false;
+        foreach (var type in Types)
         {
-            Type = RecordType.Nsec;
-        }
-
-        public DomainName NextOwnerName { get; set; } = DomainName.Root;
-
-        public List<RecordType> Types { get; set; } = new();
-
-        public override void ReadData(DnsReader reader, int length)
-        {
-            var end = reader.CurrentPosition + length;
-            NextOwnerName = reader.ReadDomainName();
-            while (reader.CurrentPosition < end)
+            if (next)
             {
-                Types.AddRange(reader.ReadBitmap().Select(t => (RecordType)t));
+                writer.WriteSpace();
             }
-        }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteDomainName(NextOwnerName, uncompressed: true);
-            writer.WriteBitmap(Types.Select(t => (ushort)t));
-        }
-
-        public override void ReadData(MasterReader reader)
-        {
-            NextOwnerName = reader.ReadDomainName();
-            while (!reader.IsEndOfLine())
-            {
-                Types.Add(reader.ReadDnsType());
-            }
-        }
-
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteDomainName(NextOwnerName);
-
-            var next = false;
-            foreach (var type in Types)
-            {
-                if (next)
-                {
-                    writer.WriteSpace();
-                }
-                writer.WriteDnsType(type, appendSpace: false);
-                next = true;
-            }
+            writer.WriteDnsType(type, false);
+            next = true;
         }
     }
 }

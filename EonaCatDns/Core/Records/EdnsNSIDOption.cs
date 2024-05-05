@@ -15,25 +15,24 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class EdnsNsidOption : EdnsOptionBase
 {
-    public class EdnsNsidOption : EdnsOptionBase
+    public EdnsNsidOption()
     {
-        public EdnsNsidOption()
-        {
-            Type = EdnsOptionType.Nsid;
-        }
+        Type = EdnsOptionType.Nsid;
+    }
 
-        public byte[] Id { get; set; }
+    public byte[] Id { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Id = reader.ReadBytes(length);
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Id = reader.ReadBytes(length);
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteBytes(Id);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteBytes(Id);
     }
 }

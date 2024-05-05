@@ -15,168 +15,170 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Base;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using EonaCat.Dns.Core.Base;
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public class MasterWriter
 {
-    public class MasterWriter
+    private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    private readonly TextWriter _text;
+
+    internal MasterWriter(TextWriter text)
     {
-        private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        _text = text;
+    }
 
-        private readonly TextWriter _text;
+    public void WriteSpace()
+    {
+        _text.Write(' ');
+    }
 
-        internal MasterWriter(TextWriter text)
+    public void WriteEndOfLine()
+    {
+        _text.Write("\r\n");
+    }
+
+    public void WriteByte(byte value, bool appendSpace = true)
+    {
+        _text.Write(value);
+        if (appendSpace)
         {
-            _text = text;
+            WriteSpace();
+        }
+    }
+
+    public void WriteUInt16(ushort value, bool appendSpace = true)
+    {
+        _text.Write(value);
+        if (appendSpace)
+        {
+            WriteSpace();
+        }
+    }
+
+    public void WriteUInt32(uint value, bool appendSpace = true)
+    {
+        _text.Write(value);
+        if (appendSpace)
+        {
+            WriteSpace();
+        }
+    }
+
+    public void WriteString(string value, bool appendSpace = true)
+    {
+        var needQuote = false;
+
+        value ??= string.Empty;
+        if (value == string.Empty)
+        {
+            needQuote = true;
         }
 
-        public void WriteSpace()
+        value = value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        if (value.Contains(' '))
         {
-            _text.Write(' ');
+            needQuote = true;
         }
 
-        public void WriteEndOfLine()
+        if (needQuote)
         {
-            _text.Write("\r\n");
+            _text.Write('"');
         }
 
-        public void WriteByte(byte value, bool appendSpace = true)
+        _text.Write(value);
+        if (needQuote)
         {
-            _text.Write(value);
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
+            _text.Write('"');
         }
 
-        public void WriteUInt16(ushort value, bool appendSpace = true)
+        if (appendSpace)
         {
-            _text.Write(value);
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
+            WriteSpace();
+        }
+    }
+
+    public void WriteStringUnencoded(string value, bool appendSpace = true)
+    {
+        _text.Write(value);
+        if (appendSpace)
+        {
+            WriteSpace();
+        }
+    }
+
+    public void WriteDomainName(DomainName value, bool appendSpace = true)
+    {
+        WriteStringUnencoded(value.ToString(), appendSpace);
+    }
+
+    public void WriteBase16String(byte[] value, bool appendSpace = true)
+    {
+        WriteString(Base16Converter.ToString(value, true), appendSpace);
+    }
+
+    public void WriteBase64String(byte[] value, bool appendSpace = true)
+    {
+        WriteString(Convert.ToBase64String(value), appendSpace);
+    }
+
+    public void WriteTimeSpan16(TimeSpan value, bool appendSpace = true)
+    {
+        WriteUInt16((ushort)value.TotalSeconds, appendSpace);
+    }
+
+    public void WriteTimeSpan32(TimeSpan value, bool appendSpace = true)
+    {
+        WriteUInt32((uint)value.TotalSeconds, appendSpace);
+    }
+
+    public void WriteDateTime(DateTime value, bool appendSpace = true)
+    {
+        WriteString(value.ToUniversalTime().ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture), appendSpace);
+    }
+
+    public void WriteIpAddress(IPAddress value, bool appendSpace = true)
+    {
+        WriteString(value.ToString(), appendSpace);
+    }
+
+    public void WriteDnsType(RecordType value, bool appendSpace = true)
+    {
+        if (!Enum.IsDefined(typeof(RecordType), value))
+        {
+            _text.Write("TYPE_");
         }
 
-        public void WriteUInt32(uint value, bool appendSpace = true)
+        _text.Write(value);
+        if (appendSpace)
         {
-            _text.Write(value);
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
+            WriteSpace();
+        }
+    }
+
+    public void WriteDnsClass(RecordClass value, bool appendSpace = true)
+    {
+        if (!Enum.IsDefined(typeof(RecordClass), value))
+        {
+            _text.Write("UNKNOWN_CLASS_");
         }
 
-        public void WriteString(string value, bool appendSpace = true)
+        _text.Write(value);
+        if (appendSpace)
         {
-            var needQuote = false;
-
-            value ??= string.Empty;
-            if (value == string.Empty)
-            {
-                needQuote = true;
-            }
-
-            value = value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-            if (value.Contains(' '))
-            {
-                needQuote = true;
-            }
-
-            if (needQuote)
-            {
-                _text.Write('"');
-            }
-
-            _text.Write(value);
-            if (needQuote)
-            {
-                _text.Write('"');
-            }
-
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
+            WriteSpace();
         }
+    }
 
-        public void WriteStringUnencoded(string value, bool appendSpace = true)
-        {
-            _text.Write(value);
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
-        }
-
-        public void WriteDomainName(DomainName value, bool appendSpace = true)
-        {
-            WriteStringUnencoded(value.ToString(), appendSpace);
-        }
-
-        public void WriteBase16String(byte[] value, bool appendSpace = true)
-        {
-            WriteString(Base16Converter.ToString(value, true), appendSpace);
-        }
-
-        public void WriteBase64String(byte[] value, bool appendSpace = true)
-        {
-            WriteString(Convert.ToBase64String(value), appendSpace);
-        }
-
-        public void WriteTimeSpan16(TimeSpan value, bool appendSpace = true)
-        {
-            WriteUInt16((ushort)value.TotalSeconds, appendSpace);
-        }
-
-        public void WriteTimeSpan32(TimeSpan value, bool appendSpace = true)
-        {
-            WriteUInt32((uint)value.TotalSeconds, appendSpace);
-        }
-
-        public void WriteDateTime(DateTime value, bool appendSpace = true)
-        {
-            WriteString(value.ToUniversalTime().ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture), appendSpace);
-        }
-
-        public void WriteIpAddress(IPAddress value, bool appendSpace = true)
-        {
-            WriteString(value.ToString(), appendSpace);
-        }
-
-        public void WriteDnsType(RecordType value, bool appendSpace = true)
-        {
-            if (!Enum.IsDefined(typeof(RecordType), value))
-            {
-                _text.Write("TYPE_");
-            }
-            _text.Write(value);
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
-        }
-
-        public void WriteDnsClass(RecordClass value, bool appendSpace = true)
-        {
-            if (!Enum.IsDefined(typeof(RecordClass), value))
-            {
-                _text.Write("UNKNOWN_CLASS_");
-            }
-            _text.Write(value);
-            if (appendSpace)
-            {
-                WriteSpace();
-            }
-        }
-
-        public static string GetDefaultMasterFile(string ipAddressV4)
-        {
-            return $@"; Generated by EonaCatDns
+    public static string GetDefaultMasterFile(string ipAddressV4)
+    {
+        return $@"; Generated by EonaCatDns
 ; Zone name and default timeout (TTL)
 
 $ORIGIN blocky.dns
@@ -206,6 +208,5 @@ ftp          IN     CNAME   server1
 mail         IN     CNAME   server1
 mail2        IN     CNAME   server2
 www          IN     CNAME   server2";
-        }
     }
 }

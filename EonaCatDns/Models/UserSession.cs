@@ -17,30 +17,29 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns
+namespace EonaCat.Dns.Models;
+
+public class UserSession
 {
-    public class UserSession
+    private static readonly TimeSpan SessionTimeout = TimeSpan.FromMinutes(30);
+
+    private DateTime _lastSeen;
+
+    public UserSession(string username)
     {
-        private static readonly TimeSpan SessionTimeout = TimeSpan.FromMinutes(30);
+        Username = username;
+        _lastSeen = DateTime.Now;
+    }
 
-        private DateTime _lastSeen;
+    public string Username { get; }
 
-        public UserSession(string username)
-        {
-            Username = username;
-            _lastSeen = DateTime.Now;
-        }
+    public void UpdateLastSeen()
+    {
+        _lastSeen = DateTime.Now;
+    }
 
-        public string Username { get; }
-
-        public void UpdateLastSeen()
-        {
-            _lastSeen = DateTime.Now;
-        }
-
-        public bool HasExpired()
-        {
-            return _lastSeen.Add(SessionTimeout) < DateTime.Now;
-        }
+    public bool HasExpired()
+    {
+        return _lastSeen.Add(SessionTimeout) < DateTime.Now;
     }
 }

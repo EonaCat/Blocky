@@ -17,71 +17,69 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Base
+namespace EonaCat.Dns.Core.Base;
+
+public sealed class BaseAlphabet
 {
-    public sealed class BaseAlphabet
+    internal const byte NotInAlphabet = 255;
+    public static readonly BaseAlphabet Base16UpperCaseAlphabet = new("0123456789ABCDEF".ToCharArray());
+
+    public static readonly BaseAlphabet Base16LowerCaseAlphabet = new("0123456789abcdef".ToCharArray());
+
+    public static readonly BaseAlphabet Base32Alphabet = new("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".ToCharArray(), '=');
+    internal readonly char[] Alphabet;
+    internal readonly byte[] AlphabetInverse;
+    public readonly int DecodingBlockSize;
+    public readonly int EncodingBits;
+    public readonly int EncodingBlockSize;
+    internal readonly char Padding;
+
+    public BaseAlphabet(char[] alphabet, char padding = '\u00ff')
     {
-        public static readonly BaseAlphabet Base16UpperCaseAlphabet = new("0123456789ABCDEF".ToCharArray());
-
-        public static readonly BaseAlphabet Base16LowerCaseAlphabet = new("0123456789abcdef".ToCharArray());
-
-        public static readonly BaseAlphabet Base32Alphabet = new("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".ToCharArray(), padding: '=');
-
-        internal const byte NotInAlphabet = 255;
-        internal readonly char[] Alphabet;
-        internal readonly byte[] AlphabetInverse;
-        internal readonly char Padding;
-
-        internal bool HasPadding => Padding != '\u00ff';
-        public readonly int EncodingBits;
-        public readonly int EncodingBlockSize;
-        public readonly int DecodingBlockSize;
-
-        public BaseAlphabet(char[] alphabet, char padding = '\u00ff')
+        if (alphabet == null)
         {
-            if (alphabet == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(alphabet));
-            }
-
-            switch (alphabet.Length)
-            {
-                case 32:
-                    EncodingBlockSize = 5;
-                    DecodingBlockSize = 8;
-                    EncodingBits = 5;
-                    break;
-
-                case 16:
-                    EncodingBits = 4;
-                    EncodingBlockSize = 1;
-                    DecodingBlockSize = 2;
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(alphabet));
-            }
-
-            Alphabet = alphabet;
-            Padding = padding;
-            AlphabetInverse = new byte[127];
-            for (var i = 0; i < AlphabetInverse.Length; i++)
-            {
-                AlphabetInverse[i] = NotInAlphabet;
-            }
-
-            for (var i = 0; i < Alphabet.Length; i++)
-            {
-                var charNum = (int)alphabet[i];
-                if (charNum < 0 || charNum > 127 || charNum == padding)
-                {
-                    throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(alphabet));
-                }
-
-                AlphabetInverse[charNum] = (byte)i;
-            }
+            throw new ArgumentNullException("EonaCatDns: " + nameof(alphabet));
         }
 
-        public override string ToString() => $"Base{Alphabet.Length}, Padding: '{Padding}'({(HasPadding ? "y" : "n")})";
+        switch (alphabet.Length)
+        {
+            case 32:
+                EncodingBlockSize = 5;
+                DecodingBlockSize = 8;
+                EncodingBits = 5;
+                break;
+
+            case 16:
+                EncodingBits = 4;
+                EncodingBlockSize = 1;
+                DecodingBlockSize = 2;
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(alphabet));
+        }
+
+        Alphabet = alphabet;
+        Padding = padding;
+        AlphabetInverse = new byte[127];
+        for (var i = 0; i < AlphabetInverse.Length; i++) AlphabetInverse[i] = NotInAlphabet;
+
+        for (var i = 0; i < Alphabet.Length; i++)
+        {
+            var charNum = (int)alphabet[i];
+            if (charNum < 0 || charNum > 127 || charNum == padding)
+            {
+                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(alphabet));
+            }
+
+            AlphabetInverse[charNum] = (byte)i;
+        }
+    }
+
+    internal bool HasPadding => Padding != '\u00ff';
+
+    public override string ToString()
+    {
+        return $"Base{Alphabet.Length}, Padding: '{Padding}'({(HasPadding ? "y" : "n")})";
     }
 }

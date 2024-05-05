@@ -15,103 +15,96 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records.Registry;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using EonaCat.Dns.Core.Records.Registry;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class OptRecord : ResourceRecord
 {
-    public class OptRecord : ResourceRecord
+    public OptRecord()
     {
-        public OptRecord()
+        Type = RecordType.Opt;
+        Name = DomainName.Root;
+        RequestPayloadSize = 1280;
+        Ttl = TimeSpan.Zero;
+    }
+
+    public ushort RequestPayloadSize
+    {
+        get => (ushort)Class;
+        set => Class = (RecordClass)value;
+    }
+
+    public byte Opcode8
+    {
+        get => (byte)(((Ttl.Ticks / TimeSpan.TicksPerSecond) >> 24) & 255);
+        set =>
+            Ttl = TimeSpan.FromTicks(
+                (((Ttl.Ticks / TimeSpan.TicksPerSecond) & ~4278190080L)
+                 | ((long)value << 24))
+                * TimeSpan.TicksPerSecond);
+    }
+
+    public byte Version
+    {
+        get => (byte)(((Ttl.Ticks / TimeSpan.TicksPerSecond) >> 16) & 255);
+        set =>
+            Ttl = TimeSpan.FromTicks(
+                (((Ttl.Ticks / TimeSpan.TicksPerSecond) & ~16711680L)
+                 | ((long)value << 16))
+                * TimeSpan.TicksPerSecond);
+    }
+
+    public bool Do
+    {
+        get => Ttl.Ticks / TimeSpan.TicksPerSecond == 32768L;
+        set =>
+            Ttl = TimeSpan.FromTicks(
+                (((Ttl.Ticks / TimeSpan.TicksPerSecond) & ~32768L)
+                 | (Convert.ToInt64(value) << 15))
+                * TimeSpan.TicksPerSecond);
+    }
+
+    public List<EdnsOptionBase> Options { get; set; } = new();
+
+    public override void ReadData(DnsReader reader, int length)
+    {
+        var end = reader.CurrentPosition + length;
+        while (reader.CurrentPosition < end)
         {
-            Type = RecordType.Opt;
-            Name = DomainName.Root;
-            RequestPayloadSize = 1280;
-            Ttl = TimeSpan.Zero;
-        }
+            var type = (EdnsOptionType)reader.ReadUInt16();
+            int optionLength = reader.ReadUInt16();
 
-        public ushort RequestPayloadSize
+            var option = EdnsOptionRegistry.Options.TryGetValue(type, out var maker)
+                ? maker()
+                : new UnknownEdnsOption { Type = type };
+            Options.Add(option);
+            option.ReadData(reader, optionLength);
+        }
+    }
+
+    public override void WriteData(DnsWriter writer)
+    {
+        foreach (var option in Options)
         {
-            get => (ushort)Class;
-            set => Class = (RecordClass)value;
+            writer.WriteUInt16((ushort)option.Type);
+
+            writer.PushLengthPrefixedScope();
+            option.WriteData(writer);
+            writer.PopLengthPrefixedScope();
         }
+    }
 
-        public byte Opcode8
-        {
-            get => (byte)(Ttl.Ticks / TimeSpan.TicksPerSecond >> 24 & 255);
-            set
-            {
-                Ttl = TimeSpan.FromTicks(
-                    (Ttl.Ticks / TimeSpan.TicksPerSecond & ~4278190080L
-                    | (long)value << 24)
-                    * TimeSpan.TicksPerSecond);
-            }
-        }
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"; EDNS: version: {Version}, udp {RequestPayloadSize}");
 
-        public byte Version
-        {
-            get => (byte)(Ttl.Ticks / TimeSpan.TicksPerSecond >> 16 & 255);
-            set
-            {
-                Ttl = TimeSpan.FromTicks(
-                    (Ttl.Ticks / TimeSpan.TicksPerSecond & ~16711680L
-                    | (long)value << 16)
-                    * TimeSpan.TicksPerSecond);
-            }
-        }
+        foreach (var option in Options) sb.AppendLine(option.ToString());
 
-        public bool Do
-        {
-            get => Ttl.Ticks / TimeSpan.TicksPerSecond == 32768L;
-            set
-            {
-                Ttl = TimeSpan.FromTicks(
-                    (Ttl.Ticks / TimeSpan.TicksPerSecond & ~32768L
-                    | Convert.ToInt64(value) << 15)
-                    * TimeSpan.TicksPerSecond);
-            }
-        }
-
-        public List<EdnsOptionBase> Options { get; set; } = new();
-
-        public override void ReadData(DnsReader reader, int length)
-        {
-            var end = reader.CurrentPosition + length;
-            while (reader.CurrentPosition < end)
-            {
-                var type = (EdnsOptionType)reader.ReadUInt16();
-                int optionLength = reader.ReadUInt16();
-
-                var option = EdnsOptionRegistry.Options.TryGetValue(type, out var maker) ? maker() : new UnknownEdnsOption { Type = type };
-                Options.Add(option);
-                option.ReadData(reader, optionLength);
-            }
-        }
-
-        public override void WriteData(DnsWriter writer)
-        {
-            foreach (var option in Options)
-            {
-                writer.WriteUInt16((ushort)option.Type);
-
-                writer.PushLengthPrefixedScope();
-                option.WriteData(writer);
-                writer.PopLengthPrefixedScope();
-            }
-        }
-
-        public override string ToString()
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"; EDNS: version: {Version}, udp {RequestPayloadSize}");
-
-            foreach (var option in Options)
-            {
-                sb.AppendLine(option.ToString());
-            }
-            return sb.ToString();
-        }
+        return sb.ToString();
     }
 }

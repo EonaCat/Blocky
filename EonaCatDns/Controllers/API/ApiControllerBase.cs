@@ -16,22 +16,22 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Exceptions;
-using EonaCat.Json;
-using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
+using EonaCat.Dns.Exceptions;
+using EonaCat.Json;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EonaCat.Dns.Controllers.API;
 
 [Controller]
 public abstract class ApiControllerBase : Controller
 {
-    [ActionContext]
-    public ActionContext ActionContext { get; set; }
+    [ActionContext] public ActionContext ActionContext { get; set; }
 
     internal static bool IsAuthenticated(string token, bool throwExceptionIfNotAuthenticated = true)
     {
@@ -87,7 +87,7 @@ public abstract class ApiControllerBase : Controller
         return content;
     }
 
-    internal static void WriteJsonTextWriterException(Exception exception, JsonTextWriter jsonWriter)
+    internal static async Task WriteJsonTextWriterException(Exception exception, JsonTextWriter jsonWriter)
     {
         if (exception is WebInvalidTokenException)
         {
@@ -99,7 +99,7 @@ public abstract class ApiControllerBase : Controller
         }
         else
         {
-            EonaCatDns.Managers.WriteToLog(exception);
+            await EonaCatDns.Managers.WriteToLog(exception).ConfigureAwait(false);
 
             jsonWriter.WritePropertyName("status");
             jsonWriter.WriteValue("error");

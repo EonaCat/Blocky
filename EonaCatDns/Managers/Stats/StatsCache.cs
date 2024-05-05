@@ -19,61 +19,60 @@ limitations under the License
 using System;
 using System.Collections.Generic;
 
-namespace EonaCat.Dns.Managers.Stats
+namespace EonaCat.Dns.Managers.Stats;
+
+public static class StatsCache
 {
-    public static class StatsCache
+    private static Cache.Memory.Cache _cache;
+
+    static StatsCache()
     {
-        private static Cache.Memory.Cache _cache;
+        Init();
+    }
 
-        static StatsCache()
+    public static void Init()
+    {
+        _cache = new Cache.Memory.Cache();
+    }
+
+    public static Dictionary<string, List<StatsLog>> GetCacheAsync(string statsKey)
+    {
+        var cacheKey = GetCacheKey(statsKey);
+        if (cacheKey == null)
         {
-            Init();
+            return null;
         }
 
-        public static void Init()
+        var cached = _cache.HasKey(cacheKey) ? _cache.Get<Dictionary<string, List<StatsLog>>>($"{cacheKey}") : null;
+        return cached;
+    }
+
+    private static string GetCacheKey(string statsKey)
+    {
+        if (string.IsNullOrWhiteSpace(statsKey))
         {
-            _cache = new Cache.Memory.Cache();
+            return null;
         }
 
-        public static Dictionary<string, List<StatsLog>> GetCacheAsync(string statsKey)
-        {
-            var cacheKey = GetCacheKey(statsKey);
-            if (cacheKey == null)
-            {
-                return null;
-            }
+        var cacheKey = $"{statsKey}";
+        return cacheKey;
+    }
 
-            var cached = _cache.HasKey(cacheKey) ? _cache.Get<Dictionary<string, List<StatsLog>>>($"{cacheKey}") : null;
-            return cached;
+    public static void SetCache(string statsKey,
+        Dictionary<string, List<StatsLog>> cachedDictionary, TimeSpan? ttl = null)
+    {
+        var cacheKey = GetCacheKey(statsKey);
+        if (cacheKey == null)
+        {
+            return;
         }
 
-        private static string GetCacheKey(string statsKey)
+        var cacheTtl = TimeSpan.FromHours(1);
+        if (ttl.HasValue)
         {
-            if (string.IsNullOrWhiteSpace(statsKey))
-            {
-                return null;
-            }
-
-            var cacheKey = $"{statsKey}";
-            return cacheKey;
+            cacheTtl = ttl.Value;
         }
 
-        public static void SetCache(string statsKey,
-            Dictionary<string, List<StatsLog>> cachedDictionary, TimeSpan? ttl = null)
-        {
-            var cacheKey = GetCacheKey(statsKey);
-            if (cacheKey == null)
-            {
-                return;
-            }
-
-            var cacheTtl = TimeSpan.FromHours(1);
-            if (ttl.HasValue)
-            {
-                cacheTtl = ttl.Value;
-            }
-
-            _cache.Set(cacheKey, cachedDictionary, cacheTtl);
-        }
+        _cache.Set(cacheKey, cachedDictionary, cacheTtl);
     }
 }

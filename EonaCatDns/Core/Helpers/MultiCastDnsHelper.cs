@@ -15,23 +15,25 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.MultiCast;
-using EonaCat.Dns.Core.Records;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
+using EonaCat.Dns.Core.MultiCast;
+using EonaCat.Dns.Core.Records;
 using EonaCat.Logger;
 
-namespace EonaCat.Dns.Core.Helpers
-{
-    internal class MultiCastDnsHelper
-    {
-        internal static ConcurrentDictionary<string, string> Hosts = new();
-        public static bool IsMultiCastEnabled => MultiCastService is { IsRunning: true };
-        internal static MultiCastService MultiCastService { get; private set; }
-        private static ServiceDiscovery ServiceDiscovery { get; set; }
+namespace EonaCat.Dns.Core.Helpers;
 
-        internal static async Task StartAsync(ELogType maxLogType = ELogType.INFO, bool useLocalTime = false)
+internal class MultiCastDnsHelper
+{
+    internal static ConcurrentDictionary<string, string> Hosts = new();
+    public static bool IsMultiCastEnabled => MultiCastService is { IsRunning: true };
+    internal static MultiCastService MultiCastService { get; private set; }
+    private static ServiceDiscovery ServiceDiscovery { get; set; }
+
+    internal static Task StartAsync(ELogType maxLogType = ELogType.DEBUG, bool useLocalTime = false)
+    {
+        Task.Run(async () =>
         {
             LoggerMultiCast.MaxLogType = maxLogType;
             LoggerMultiCast.UseLocalTime = useLocalTime;
@@ -59,24 +61,24 @@ namespace EonaCat.Dns.Core.Helpers
                 MultiCastService.SendQueryAsync(e.ServiceInstanceName, type: RecordType.Srv);
             };
 
-            MultiCastService.AnswerReceived += (_, e) =>
+            MultiCastService.AnswerReceived += async (_, e) =>
             {
                 // Is this an answer to a service instance details?
                 var servers = e.Message.Answers.OfType<SrvRecord>();
                 foreach (var server in servers)
                 {
-                    LoggerMultiCast.Log($"host '{server.Target}' for '{server.Name}'");
+                    await LoggerMultiCast.LogAsync($"host '{server.Target}' for '{server.Name}'").ConfigureAwait(false);
 
                     // Ask for the host IP addresses.
-                    MultiCastService.SendQueryAsync(server.Target, type: RecordType.A);
-                    MultiCastService.SendQueryAsync(server.Target, type: RecordType.Aaaa);
+                    await MultiCastService.SendQueryAsync(server.Target, type: RecordType.A).ConfigureAwait(false);
+                    await MultiCastService.SendQueryAsync(server.Target, type: RecordType.Aaaa).ConfigureAwait(false);
                 }
 
                 // Is this an answer to host addresses?
                 var addresses = e.Message.Answers.OfType<AddressRecordBase>();
                 foreach (var address in addresses)
                 {
-                    LoggerMultiCast.Log($"host '{address.Name}' at {address.Address}");
+                    await LoggerMultiCast.LogAsync($"host '{address.Name}' at {address.Address}").ConfigureAwait(false);
                     if (!Hosts.TryGetValue(address.Address.ToString(), out var name))
                     {
                         Hosts.TryAdd(address.Address.ToString(), address.Name.ToString());
@@ -92,7 +94,7 @@ namespace EonaCat.Dns.Core.Helpers
             {
                 if (!MultiCastService.IsRunning)
                 {
-                    MultiCastService.Start();
+                    await MultiCastService.StartAsync().ConfigureAwait(false);
                 }
             }
             catch
@@ -100,33 +102,31 @@ namespace EonaCat.Dns.Core.Helpers
                 Stop();
             }
 
-            while (IsMultiCastEnabled)
-            {
-                await Task.Delay(200).ConfigureAwait(false);
-            }
-        }
+            while (IsMultiCastEnabled) await Task.Delay(200).ConfigureAwait(false);
+        });
+        return Task.CompletedTask;
+    }
 
-        internal static void Stop()
+    internal static void Stop()
+    {
+        ServiceDiscovery?.Dispose();
+        MultiCastService?.Stop();
+    }
+
+    public static async Task ResolveAsync(string[] args, bool appExitAfterCommand, bool onlyExitAfterKeyPress = true)
+    {
+        if (args.Length <= 0)
         {
-            ServiceDiscovery?.Dispose();
-            MultiCastService?.Stop();
+            return;
         }
 
-        public static async Task ResolveAsync(string[] args, bool appExitAfterCommand, bool onlyExitAfterKeyPress = true)
+        if (!args[0].ToLower().StartsWith("--mdns"))
         {
-            if (args.Length <= 0)
-            {
-                return;
-            }
-
-            if (!args[0].ToLower().StartsWith("--mdns"))
-            {
-                return;
-            }
-
-            await StartAsync(ELogType.TRACE).ConfigureAwait(false);
-
-            ToolHelper.ExitAfterTool(appExitAfterCommand, onlyExitAfterKeyPress);
+            return;
         }
+
+        await StartAsync(ELogType.TRACE).ConfigureAwait(false);
+
+        ToolHelper.ExitAfterTool(appExitAfterCommand, onlyExitAfterKeyPress);
     }
 }

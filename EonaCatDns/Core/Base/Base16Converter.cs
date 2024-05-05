@@ -17,97 +17,96 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Base
+namespace EonaCat.Dns.Core.Base;
+
+public static class Base16Converter
 {
-    public static class Base16Converter
+    public static string ToString(byte[] bytes, bool lowerCase = false)
     {
-        public static string ToString(byte[] bytes, bool lowerCase = false)
+        if (bytes == null)
         {
-            if (bytes == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
-            }
-
-            return ToString(bytes, 0, bytes.Length, lowerCase);
+            throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
         }
 
-        public static string ToString(byte[] bytes, int offset, int count, bool lowerCase = false)
+        return ToString(bytes, 0, bytes.Length, lowerCase);
+    }
+
+    public static string ToString(byte[] bytes, int offset, int count, bool lowerCase = false)
+    {
+        if (bytes == null)
         {
-            if (bytes == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
-            }
-
-            if (offset < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
-            }
-
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (offset + count > bytes.Length)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (count == 0)
-            {
-                return string.Empty;
-            }
-
-            return (lowerCase ? BaseEncoding.Base16LowerCase : BaseEncoding.Base16UpperCase).GetString(bytes, offset, count);
+            throw new ArgumentNullException("EonaCatDns: " + nameof(bytes));
         }
 
-        public static byte[] ToBytes(string base16String)
+        if (offset < 0)
         {
-            if (base16String == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(base16String));
-            }
-
-            return ToBytes(base16String, 0, base16String.Length);
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
         }
 
-        public static byte[] ToBytes(string base16String, int offset, int count)
+        if (count < 0)
         {
-            if (base16String == null)
-            {
-                throw new ArgumentNullException("EonaCatDns: " + nameof(base16String));
-            }
-
-            if (offset < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
-            }
-
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (offset + count > base16String.Length)
-            {
-                throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
-            }
-
-            if (count == 0)
-            {
-                return Array.Empty<byte>();
-            }
-
-            var isLowerCase = true;
-            for (var i = offset; i < offset + count; i++)
-            {
-                if (base16String[i] >= 'A' && base16String[i] <= 'F')
-                {
-                    isLowerCase = false;
-                }
-            }
-
-            return (isLowerCase ? BaseEncoding.Base16LowerCase : BaseEncoding.Base16UpperCase).GetBytes(base16String, offset, count);
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
         }
+
+        if (offset + count > bytes.Length)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
+        }
+
+        if (count == 0)
+        {
+            return string.Empty;
+        }
+
+        return (lowerCase ? BaseEncoding.Base16LowerCase : BaseEncoding.Base16UpperCase)
+            .GetString(bytes, offset, count);
+    }
+
+    public static byte[] ToBytes(string base16String)
+    {
+        if (base16String == null)
+        {
+            throw new ArgumentNullException("EonaCatDns: " + nameof(base16String));
+        }
+
+        return ToBytes(base16String, 0, base16String.Length);
+    }
+
+    public static byte[] ToBytes(string base16String, int offset, int count)
+    {
+        if (base16String == null)
+        {
+            throw new ArgumentNullException("EonaCatDns: " + nameof(base16String));
+        }
+
+        if (offset < 0)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(offset));
+        }
+
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
+        }
+
+        if (offset + count > base16String.Length)
+        {
+            throw new ArgumentOutOfRangeException("EonaCatDns: " + nameof(count));
+        }
+
+        if (count == 0)
+        {
+            return Array.Empty<byte>();
+        }
+
+        var isLowerCase = true;
+        for (var i = offset; i < offset + count; i++)
+            if (base16String[i] >= 'A' && base16String[i] <= 'F')
+            {
+                isLowerCase = false;
+            }
+
+        return (isLowerCase ? BaseEncoding.Base16LowerCase : BaseEncoding.Base16UpperCase).GetBytes(base16String,
+            offset, count);
     }
 }

@@ -16,17 +16,17 @@ limitations under the License
 
 */
 
+using System;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using EonaCat.Dns.Core;
 using EonaCat.Dns.Database;
 using EonaCat.Dns.Database.Models.Entities;
 using EonaCat.Dns.Exceptions;
 using EonaCat.Json;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using BlockList = EonaCat.Dns.Core.BlockList;
 
 namespace EonaCat.Dns.Controllers.API;
@@ -58,12 +58,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -87,9 +87,11 @@ public class ApiController : ApiControllerBase
             await jsonWriter.WritePropertyNameAsync(ResponseTag).ConfigureAwait(false);
             await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
 
-            int.TryParse(id, out var domainId);
+            _ = int.TryParse(id, out var domainId);
             var isNew = domainId == 0;
-            var domain = isNew ? null : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
+            var domain = isNew
+                ? null
+                : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
             if (domain == null)
             {
                 WriteNOkStatus(jsonWriter);
@@ -107,12 +109,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -121,7 +123,7 @@ public class ApiController : ApiControllerBase
     }
 
     [HttpGet("api/blocklistProgress")]
-    public Task<IActionResult> BlocklistProgress(string token, string url)
+    public async Task<IActionResult> BlocklistProgress(string token, string url)
     {
         try
         {
@@ -134,14 +136,14 @@ public class ApiController : ApiControllerBase
                     currentTask.Current,
                     currentTask.Total,
                     currentTask.Progress,
-                    currentTask.Status,
+                    currentTask.Status
                 };
 
                 var content = new JsonResult(jsonResult)
                 {
                     ContentType = ConstantsDns.ContentType.Json
                 };
-                return Task.FromResult<IActionResult>(content);
+                return await Task.FromResult<IActionResult>(content).ConfigureAwait(false);
             }
 
             var completedResult = new
@@ -150,23 +152,25 @@ public class ApiController : ApiControllerBase
                 Total = 100,
                 Progress = 100,
                 Status = "Completed",
-                IsUpdating = false,
+                IsUpdating = false
             };
 
             var empty = new JsonResult(completedResult)
             {
                 ContentType = ConstantsDns.ContentType.Json
             };
-            return Task.FromResult<IActionResult>(empty);
+            return await Task.FromResult<IActionResult>(empty).ConfigureAwait(false);
+            ;
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
             using var memoryStream = new MemoryStream();
             using var jsonWriter = new JsonTextWriter(new StreamWriter(memoryStream));
             StartJsonWriter(jsonWriter);
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             EndJsonWriter(jsonWriter);
-            return Task.FromResult(JsonMemoryStream(memoryStream, HttpStatusCode.Forbidden));
+            return await Task.FromResult(JsonMemoryStream(memoryStream, HttpStatusCode.Forbidden))
+                .ConfigureAwait(false);
         }
     }
 
@@ -186,9 +190,11 @@ public class ApiController : ApiControllerBase
             await jsonWriter.WritePropertyNameAsync(ResponseTag).ConfigureAwait(false);
             await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
 
-            int.TryParse(id, out var logId);
+            _ = int.TryParse(id, out var logId);
             var isNew = logId == 0;
-            var log = isNew ? null : await DatabaseManager.Logs.FirstOrDefaultAsync(x => x.Id == logId).ConfigureAwait(false);
+            var log = isNew
+                ? null
+                : await DatabaseManager.Logs.FirstOrDefaultAsync(x => x.Id == logId).ConfigureAwait(false);
             if (log == null)
             {
                 WriteNOkStatus(jsonWriter);
@@ -205,12 +211,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -233,9 +239,11 @@ public class ApiController : ApiControllerBase
             await jsonWriter.WritePropertyNameAsync(ResponseTag).ConfigureAwait(false);
             await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
 
-            int.TryParse(id, out var domainId);
+            _ = int.TryParse(id, out var domainId);
             var isNew = domainId == 0;
-            var domain = isNew ? null : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
+            var domain = isNew
+                ? null
+                : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
             if (domain == null)
             {
                 WriteNOkStatus(jsonWriter);
@@ -253,12 +261,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -314,12 +322,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -342,9 +350,11 @@ public class ApiController : ApiControllerBase
             await jsonWriter.WritePropertyNameAsync(ResponseTag).ConfigureAwait(false);
             await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
 
-            int.TryParse(id, out var domainId);
+            _ = int.TryParse(id, out var domainId);
             var isNew = domainId == 0;
-            var domain = isNew ? null : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
+            var domain = isNew
+                ? null
+                : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
             if (domain == null)
             {
                 WriteNOkStatus(jsonWriter);
@@ -362,12 +372,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -376,7 +386,7 @@ public class ApiController : ApiControllerBase
     }
 
     [HttpPost("api/logs")]
-    public IActionResult Logs(string token)
+    public async Task<IActionResult> Logs(string token)
     {
         var httpStatusCode = HttpStatusCode.OK;
         using var memoryStream = new MemoryStream();
@@ -397,12 +407,12 @@ public class ApiController : ApiControllerBase
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -411,7 +421,7 @@ public class ApiController : ApiControllerBase
     }
 
     [HttpPost("api/deleteLog")]
-    public IActionResult DeleteLog(string token, string log)
+    public async Task<IActionResult> DeleteLog(string token, string log)
     {
         var httpStatusCode = HttpStatusCode.OK;
         using var memoryStream = new MemoryStream();
@@ -425,19 +435,19 @@ public class ApiController : ApiControllerBase
             jsonWriter.WritePropertyName(ResponseTag);
             jsonWriter.WriteStartObject();
 
-            Managers.Managers.ApiDeleteLog(log);
+            await Managers.Managers.ApiDeleteLog(log).ConfigureAwait(false);
             jsonWriter.WriteEndObject();
 
             WriteOkStatus(jsonWriter);
         }
         catch (WebInvalidTokenException invalidTokenWebServiceException)
         {
-            WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter);
+            await WriteJsonTextWriterException(invalidTokenWebServiceException, jsonWriter).ConfigureAwait(false);
             httpStatusCode = invalidTokenWebServiceException.StatusCode;
         }
         catch (Exception exception)
         {
-            WriteJsonTextWriterException(exception, jsonWriter);
+            await WriteJsonTextWriterException(exception, jsonWriter).ConfigureAwait(false);
             httpStatusCode = HttpStatusCode.BadRequest;
         }
 
@@ -446,12 +456,12 @@ public class ApiController : ApiControllerBase
     }
 
     [HttpGet("api/viewLog")]
-    public IActionResult ViewLog(string token, string log)
+    public async Task<IActionResult> ViewLog(string token, string log)
     {
         try
         {
             IsAuthenticated(token);
-            EonaCatDns.Managers.ApiLogs(ActionContext.HttpContext.Response, $"{log}.log");
+            await EonaCatDns.Managers.ApiLogs(ActionContext.HttpContext.Response, $"{log}.log").ConfigureAwait(false);
         }
         catch (WebInvalidTokenException)
         {
@@ -459,7 +469,7 @@ public class ApiController : ApiControllerBase
         }
         catch (Exception exception)
         {
-            EonaCatDns.Managers.WriteToLog(exception.Message);
+            await EonaCatDns.Managers.WriteToLog(exception.Message).ConfigureAwait(false);
             return BadRequest("Unknown error occurred, please try again later!");
         }
 

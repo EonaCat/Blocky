@@ -17,11 +17,12 @@ limitations under the License
 */
 
 using System.Collections.Generic;
+using EonaCat.Dns.Database.Models.Entities;
 
-namespace EonaCat.Dns;
+namespace EonaCat.Dns.Models;
 
 internal class BlockedSetup
 {
-    public HashSet<Database.Models.Entities.BlockList> Urls { get; set; }
+    public HashSet<BlockList> Urls { get; set; }
     public string RedirectionAddress { get; set; }
 }

@@ -16,16 +16,16 @@ limitations under the License
 
 */
 
-using EonaCat.Logger;
-using EonaCat.Logger.Managers;
-using Microsoft.AspNetCore.Http;
 using System;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using EonaCat.Logger;
 using EonaCat.Logger.Extensions;
+using EonaCat.Logger.Managers;
+using Microsoft.AspNetCore.Http;
 
 namespace EonaCat.Dns.Extensions;
 
@@ -40,14 +40,15 @@ public class ExceptionHandlingMiddleware
         AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
     }
 
-    private void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
+    private async void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
     {
-        LogManager.Instance.Write(e.Exception.FormatExceptionToMessage(), ELogType.ERROR);
+        await LogManager.Instance.WriteAsync(e.Exception.FormatExceptionToMessage(), ELogType.ERROR)
+            .ConfigureAwait(false);
     }
 
-    private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    private async void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        LogManager.Instance.Write(e.ExceptionObject.ToString(), ELogType.ERROR);
+        await LogManager.Instance.WriteAsync(e.ExceptionObject.ToString(), ELogType.ERROR).ConfigureAwait(false);
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -62,23 +63,22 @@ public class ExceptionHandlingMiddleware
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         var errorCode = CalculateErrorCode(context.TraceIdentifier);
         var message =
             $"An unhandled exception occurred; please contact the help desk with the following error code: '{errorCode}'  [{context.TraceIdentifier}]";
 
-        Logger.Log($"{errorCode}[{context.TraceIdentifier}]:{Environment.NewLine}{exception}", ELogType.CRITICAL);
+        await Logger.LogAsync($"{errorCode}[{context.TraceIdentifier}]:{Environment.NewLine}{exception}",
+            ELogType.CRITICAL);
 
         context.Response.ContentType = "text/plain";
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
         if (!context.Response.HasStarted) // Check if the response has not been sent to the client
         {
-            return context.Response.WriteAsync(message);
+            await context.Response.WriteAsync(message).ConfigureAwait(false);
         }
-
-        return null;
     }
 
     private static string CalculateErrorCode(string traceIdentifier)
@@ -93,10 +93,7 @@ public class ExceptionHandlingMiddleware
 
         var codeValuesLength = codeValues.Length;
 
-        for (var i = 0; i < errorCodeLength; i++)
-        {
-            stringBuilder.Append(codeValues[traceBytes[i] % codeValuesLength]);
-        }
+        for (var i = 0; i < errorCodeLength; i++) stringBuilder.Append(codeValues[traceBytes[i] % codeValuesLength]);
 
         return stringBuilder.ToString();
     }

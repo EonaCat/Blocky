@@ -15,41 +15,40 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class MxRecord : ResourceRecord
 {
-    public class MxRecord : ResourceRecord
+    public MxRecord()
     {
-        public MxRecord()
-        {
-            Type = RecordType.Mx;
-        }
+        Type = RecordType.Mx;
+    }
 
-        public ushort Preference { get; set; }
+    public ushort Preference { get; set; }
 
-        public DomainName Exchange { get; set; }
+    public DomainName Exchange { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Preference = reader.ReadUInt16();
-            Exchange = reader.ReadDomainName();
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Preference = reader.ReadUInt16();
+        Exchange = reader.ReadDomainName();
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Preference = reader.ReadUInt16();
-            Exchange = reader.ReadDomainName();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Preference = reader.ReadUInt16();
+        Exchange = reader.ReadDomainName();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteUInt16(Preference);
-            writer.WriteDomainName(Exchange);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteUInt16(Preference);
+        writer.WriteDomainName(Exchange);
+    }
 
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteUInt16(Preference);
-            writer.WriteDomainName(Exchange, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteUInt16(Preference);
+        writer.WriteDomainName(Exchange, false);
     }
 }

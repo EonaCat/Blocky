@@ -24,26 +24,26 @@ internal class StatsTotals
 {
     private static readonly object UpdateLock = new();
 
+    public long TotalBlocked;
+
+    public long TotalCached;
+
+    public int TotalClients;
+
+    public long TotalNameError;
+
+    public long TotalNoError;
+
+    public long TotalQueries;
+
+    public long TotalRefused;
+
+    public long TotalServerFailure;
+
     public StatsTotals(DateTime dateTime)
     {
         DateTime = dateTime;
     }
-
-    public int TotalClients;
-
-    public long TotalQueries;
-
-    public long TotalNoError;
-
-    public long TotalServerFailure;
-
-    public long TotalNameError;
-
-    public long TotalRefused;
-
-    public long TotalBlocked;
-
-    public long TotalCached;
 
     public DateTime DateTime { get; }
 

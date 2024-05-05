@@ -16,13 +16,13 @@ limitations under the License
 
 */
 
+using System;
+using System.Threading.Tasks;
 using EonaCat.Dns.Database;
 using EonaCat.Dns.Managers;
 using EonaCat.Dns.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -34,7 +34,7 @@ public class IndexController : ControllerBase
     }
 
     [HttpPost]
-    public ActionResult LogOut()
+    public async Task<ActionResult> LogOut()
     {
         var model = GetIndexModel();
         HttpContext.Session.Remove("UserId");
@@ -46,9 +46,10 @@ public class IndexController : ControllerBase
         {
             UserTokens.Remove(model.Token);
         }
+
         EonaCatDns.Managers.SessionManager.DeleteSession(model.Token);
         model.Token = null;
-        Logger.Log($"User '{model.Username}' logged out");
+        await Logger.LogAsync($"User '{model.Username}' logged out");
         model.Username = null;
         return RedirectToAction("Index");
     }
@@ -67,15 +68,19 @@ public class IndexController : ControllerBase
             if (userModel.IsLoggedIn)
             {
                 var userId = Convert.ToInt32(userModel.UserId);
-                var currentUser = await DatabaseManager.Users.FirstOrDefaultAsync(x => x.Id == userId).ConfigureAwait(false);
+                var currentUser = await DatabaseManager.Users.FirstOrDefaultAsync(x => x.Id == userId)
+                    .ConfigureAwait(false);
                 if (currentUser != null &&
                     currentUser.Password ==
                     UserManager.Instance.GetPasswordHash(userModel.Username, model.OldPassword))
                 {
                     currentUser.Password =
                         UserManager.Instance.GetPasswordHash(userModel.Username, model.NewPassword);
-                    await DatabaseManager.UpdateUserAsync(UserManager.Instance.ChangeCredentials(userModel.Username, model.NewPassword)).ConfigureAwait(false);
-                    EonaCatDns.Managers.WriteToLog($"Password updated for user '{userModel.Username}'");
+                    await DatabaseManager
+                        .UpdateUserAsync(UserManager.Instance.ChangeCredentials(userModel.Username, model.NewPassword))
+                        .ConfigureAwait(false);
+                    await EonaCatDns.Managers.WriteToLog($"Password updated for user '{userModel.Username}'")
+                        .ConfigureAwait(false);
                     CreateAlertBag("Your password was changed successfully!", "Changed");
                 }
                 else
@@ -105,7 +110,9 @@ public class IndexController : ControllerBase
             {
                 model.Username = model.Username.ToLower();
                 model.Password = UserManager.Instance.GetPasswordHash(model.Username, model.Password);
-                var user = await DatabaseManager.Users.FirstOrDefaultAsync(u => u.Username == model.Username && u.Password == model.Password).ConfigureAwait(false);
+                var user = await DatabaseManager.Users
+                    .FirstOrDefaultAsync(u => u.Username == model.Username && u.Password == model.Password)
+                    .ConfigureAwait(false);
 
                 if (user != null)
                 {
@@ -114,8 +121,9 @@ public class IndexController : ControllerBase
                     HttpContext.Session.SetString("name", user.Name);
                     HttpContext.Session.SetString("username", user.Username);
                     HttpContext.Session.SetString("token", token);
-                    HttpContext.Session.SetString("statsRefreshInterval", ConstantsDns.Stats.RefreshInterval.ToString());
-                    Logger.Log($"User '{model.Username}' logged in");
+                    HttpContext.Session.SetString("statsRefreshInterval",
+                        ConstantsDns.Stats.RefreshInterval.ToString());
+                    await Logger.LogAsync($"User '{model.Username}' logged in");
                     CreateAlertBag(model.Username, "Welcome", useTempData: true);
                     UserTokens.Add(token, user.Username);
                     return base.RedirectToAction("index");
@@ -127,7 +135,8 @@ public class IndexController : ControllerBase
         return View("Index", model);
     }
 
-    private void CreateAlertBag(string message, string title = "status", string currentClass = "success", bool useTempData = false)
+    private void CreateAlertBag(string message, string title = "status", string currentClass = "success",
+        bool useTempData = false)
     {
         if (useTempData)
         {

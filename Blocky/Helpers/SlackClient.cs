@@ -1,64 +1,61 @@
-﻿using EonaCat.Json;
-using System;
-using System.Collections.Specialized;
-using System.Net;
+﻿using System;
+using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
+using EonaCat.Json;
 
-namespace EonaCat.Blocky.Helpers
+namespace EonaCat.Blocky.Helpers;
+// Blocky
+// Blocking domains the way you want it.
+// Copyright EonaCat (Jeroen Saey) 2017-2023
+// https://blocky.EonaCat.com
+
+public class SlackClient
 {
-    // Blocky
-    // Blocking domains the way you want it.
-    // Copyright EonaCat (Jeroen Saey) 2017-2023
-    // https://blocky.EonaCat.com
+    private readonly Encoding _encoding = new UTF8Encoding();
+    private readonly Uri _uri;
 
-    public class SlackClient
+    /// <summary>
+    ///     SlackClient
+    /// </summary>
+    /// <param name="urlWithAccessToken"></param>
+    public SlackClient(string urlWithAccessToken)
     {
-        private readonly Encoding _encoding = new UTF8Encoding();
-        private readonly Uri _uri;
+        _uri = new Uri(urlWithAccessToken);
+    }
 
-        /// <summary>
-        ///     SlackClient
-        /// </summary>
-        /// <param name="urlWithAccessToken"></param>
-        public SlackClient(string urlWithAccessToken)
+    /// <summary>
+    ///     Post a message using simple strings
+    /// </summary>
+    /// <param name="text"></param>
+    /// <param name="username"></param>
+    /// <param name="channel"></param>
+    public async Task PostMessageAsync(string text, string username = null, string channel = null)
+    {
+        var payload = new Payload
         {
-            _uri = new Uri(urlWithAccessToken);
-        }
+            Channel = channel,
+            Username = username,
+            Text = text
+        };
 
-        /// <summary>
-        ///     Post a message using simple strings
-        /// </summary>
-        /// <param name="text"></param>
-        /// <param name="username"></param>
-        /// <param name="channel"></param>
-        public void PostMessage(string text, string username = null, string channel = null)
-        {
-            var payload = new Payload
-            {
-                Channel = channel,
-                Username = username,
-                Text = text
-            };
+        await PostMessageAsync(payload).ConfigureAwait(false);
+    }
 
-            PostMessage(payload);
-        }
+    /// <summary>
+    ///     Post a message using a Payload object
+    /// </summary>
+    /// <param name="payload"></param>
+    public async Task<string> PostMessageAsync(Payload payload)
+    {
+        var payloadJson = JsonHelper.ToJson(payload);
+        var data = new StringContent($"payload={payloadJson}", Encoding.UTF8, "application/x-www-form-urlencoded");
 
-        /// <summary>
-        ///     Post a message using a Payload object
-        /// </summary>
-        /// <param name="payload"></param>
-        public void PostMessage(Payload payload)
-        {
-            var payloadJson = JsonHelper.ToJson(payload);
+        using var client = new HttpClient();
+        var response = await client.PostAsync(_uri, data).ConfigureAwait(false);
 
-            using var client = new WebClient();
-            var data = new NameValueCollection
-            {
-                ["payload"] = payloadJson
-            };
+        response.EnsureSuccessStatusCode();
 
-            var response = client.UploadValues(_uri, "POST", data);
-            _encoding.GetString(response);
-        }
+        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
 }

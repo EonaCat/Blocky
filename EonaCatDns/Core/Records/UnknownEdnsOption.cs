@@ -17,25 +17,24 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class UnknownEdnsOption : EdnsOptionBase
 {
-    public class UnknownEdnsOption : EdnsOptionBase
+    public byte[] Data { get; set; }
+
+    public override void ReadData(DnsReader reader, int length)
     {
-        public byte[] Data { get; set; }
+        Data = reader.ReadBytes(length);
+    }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Data = reader.ReadBytes(length);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteBytes(Data);
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteBytes(Data);
-        }
-
-        public override string ToString()
-        {
-            return $";   Type = {Type}; Data = {Convert.ToBase64String(Data)}";
-        }
+    public override string ToString()
+    {
+        return $";   Type = {Type}; Data = {Convert.ToBase64String(Data)}";
     }
 }

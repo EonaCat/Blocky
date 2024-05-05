@@ -16,11 +16,11 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Database.Models.Entities;
 using System;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using EonaCat.Dns.Database.Models.Entities;
 
 namespace EonaCat.Dns.Managers;
 
@@ -51,6 +51,7 @@ internal class UserManager
         {
             return null;
         }
+
         user.Password = passwordHash;
         return user;
     }

@@ -16,8 +16,8 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Database.Models.Entities;
 using System.Collections.Generic;
+using EonaCat.Dns.Database.Models.Entities;
 
 namespace EonaCat.Dns.Models;
 

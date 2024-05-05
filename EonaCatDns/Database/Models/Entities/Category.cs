@@ -16,8 +16,8 @@ limitations under the License
 
 */
 
-using SQLite;
 using System.Collections.Generic;
+using SQLite;
 
 namespace EonaCat.Dns.Database.Models.Entities;
 

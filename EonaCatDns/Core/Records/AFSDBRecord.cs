@@ -15,41 +15,40 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class AfsdbRecord : ResourceRecord
 {
-    public class AfsdbRecord : ResourceRecord
+    public AfsdbRecord()
     {
-        public AfsdbRecord()
-        {
-            Type = RecordType.Afsdb;
-        }
+        Type = RecordType.Afsdb;
+    }
 
-        public ushort Subtype { get; set; }
+    public ushort Subtype { get; set; }
 
-        public DomainName Target { get; set; }
+    public DomainName Target { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Subtype = reader.ReadUInt16();
-            Target = reader.ReadDomainName();
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Subtype = reader.ReadUInt16();
+        Target = reader.ReadDomainName();
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Subtype = reader.ReadUInt16();
-            Target = reader.ReadDomainName();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Subtype = reader.ReadUInt16();
+        Target = reader.ReadDomainName();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteUInt16(Subtype);
-            writer.WriteDomainName(Target);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteUInt16(Subtype);
+        writer.WriteDomainName(Target);
+    }
 
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteUInt16(Subtype);
-            writer.WriteDomainName(Target, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteUInt16(Subtype);
+        writer.WriteDomainName(Target, false);
     }
 }

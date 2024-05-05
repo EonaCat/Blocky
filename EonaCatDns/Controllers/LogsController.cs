@@ -16,13 +16,13 @@ limitations under the License
 
 */
 
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using EonaCat.Dns.Database;
 using EonaCat.Dns.Models;
 using EonaCat.Helpers;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -58,16 +58,34 @@ public class LogsController : ControllerBase
             }
             else
             {
-                query = query.Where(a => (a.ClientIp != null && a.ClientIp.ToLower().Contains(search)) ||
-                                         (a.Request != null && a.Request.ToLower().Contains(search)));
+                if (search.StartsWith("*") && search.EndsWith("*"))
+                {
+                    query = query.Where(a => (a.ClientIp != null && a.ClientIp.ToLower().Contains(search)) ||
+                                             (a.Request != null && a.Request.ToLower().Contains(search)));
+                }
+                else if (search.StartsWith("*"))
+                {
+                    query = query.Where(a => (a.ClientIp != null && a.ClientIp.ToLower().EndsWith(search)) ||
+                                             (a.Request != null && a.Request.ToLower().EndsWith(search)));
+                }
+                else if (search.EndsWith("*"))
+                {
+                    query = query.Where(a => (a.ClientIp != null && a.ClientIp.ToLower().StartsWith(search)) ||
+                                             (a.Request != null && a.Request.ToLower().StartsWith(search)));
+                }
+                else
+                {
+                    query = query.Where(a => (a.ClientIp != null && a.ClientIp.ToLower().Equals(search)) ||
+                                             (a.Request != null && a.Request.ToLower().Equals(search)));
+                }
             }
         }
 
         var totalRecords = await query.CountAsync().ConfigureAwait(false);
 
         var logs = await query.Skip(dataTablesRequest.Start)
-                              .Take(dataTablesRequest.End)
-                              .ToListAsync().ConfigureAwait(false);
+            .Take(dataTablesRequest.End)
+            .ToListAsync().ConfigureAwait(false);
 
         var result = logs.Select(log => new LogViewModel
         {
@@ -81,19 +99,29 @@ public class LogsController : ControllerBase
         switch (dataTablesRequest.SortColumn)
         {
             case 0:
-                result = isAscending ? result.OrderBy(x => x.Id).ToList() : result.OrderByDescending(x => x.Id).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Id).ToList()
+                    : result.OrderByDescending(x => x.Id).ToList();
                 break;
             case 1:
-                result = isAscending ? result.OrderBy(x => x.ClientIp).ToList() : result.OrderByDescending(x => x.ClientIp).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.ClientIp).ToList()
+                    : result.OrderByDescending(x => x.ClientIp).ToList();
                 break;
             case 2:
-                result = isAscending ? result.OrderBy(x => x.Date).ToList() : result.OrderByDescending(x => x.Date).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Date).ToList()
+                    : result.OrderByDescending(x => x.Date).ToList();
                 break;
             case 3:
-                result = isAscending ? result.OrderBy(x => x.Request).ToList() : result.OrderByDescending(x => x.Request).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Request).ToList()
+                    : result.OrderByDescending(x => x.Request).ToList();
                 break;
             case 4:
-                result = isAscending ? result.OrderBy(x => x.Result).ToList() : result.OrderByDescending(x => x.Result).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Result).ToList()
+                    : result.OrderByDescending(x => x.Result).ToList();
                 break;
         }
 
@@ -108,6 +136,7 @@ public class LogsController : ControllerBase
             RedirectToAction("Index");
             return null;
         }
+
         return PartialView("../BlockyLog/Index");
     }
 }

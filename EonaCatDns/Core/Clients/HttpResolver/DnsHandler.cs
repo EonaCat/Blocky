@@ -7,14 +7,8 @@ namespace EonaCat.Dns.Core.Clients.HttpResolver;
 
 internal class DnsHandler : HttpClientHandler
 {
-    private readonly GoogleDnsResolver _dnsResolver;
-
-    public DnsHandler(GoogleDnsResolver dnsResolver)
-    {
-        _dnsResolver = dnsResolver;
-    }
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -22,8 +16,9 @@ internal class DnsHandler : HttpClientHandler
             {
                 return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             }
+
             var host = request.RequestUri.Host;
-            var ip = await _dnsResolver.ResolveAsync(host).ConfigureAwait(false);
+            var ip = await GoogleDnsResolver.ResolveAsync(host).ConfigureAwait(false);
 
             var builder = new UriBuilder(request.RequestUri)
             {
@@ -36,7 +31,7 @@ internal class DnsHandler : HttpClientHandler
         }
         catch (Exception ex)
         {
-            Logger.Log(ex);
+            await Logger.LogAsync(ex);
             return null;
         }
     }

@@ -15,9 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Logger;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
+using EonaCat.Logger;
 
 namespace EonaCat.Dns.Core.Helpers;
 
@@ -26,7 +27,8 @@ public static class MessageHelper
     public static bool ShowPacketDetails => false;
     private static bool OnlyTestDeviceIsAllowed => false;
 
-    public static void PrintPacketDetails(int messageLength, byte[] bytes, string message = null, bool showAsString = false, bool forcePacketDetails = false, bool writeToConsole = false)
+    public static async Task PrintPacketDetails(int messageLength, byte[] bytes, string message = null,
+        bool showAsString = false, bool forcePacketDetails = false, bool writeToConsole = false)
     {
         if (!ShowPacketDetails && !forcePacketDetails)
         {
@@ -56,7 +58,7 @@ public static class MessageHelper
         stringBuilder.AppendLine();
         stringBuilder.AppendLine($"TOTAL BYTES: {messageLength}");
         stringBuilder.AppendLine("===========");
-        Logger.Log(stringBuilder.ToString(), ELogType.DEBUG, writeToConsole: writeToConsole);
+        await Logger.LogAsync(stringBuilder.ToString(), ELogType.DEBUG, writeToConsole).ConfigureAwait(false);
     }
 
     public static bool TestDeviceOnly(IPAddress ipAddress)
@@ -64,10 +66,10 @@ public static class MessageHelper
         return OnlyTestDeviceIsAllowed && ipAddress.ToString() != "100.100.100.168";
     }
 
-    public static Message GetMessageFromBytes(byte[] bytes)
+    public static async Task<Message> GetMessageFromBytes(byte[] bytes)
     {
         var message = new Message();
-        message.Read(bytes, 0, bytes.Length);
+        await message.Read(bytes, 0, bytes.Length).ConfigureAwait(false);
         return message;
     }
 }

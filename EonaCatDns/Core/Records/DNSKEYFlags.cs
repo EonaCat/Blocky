@@ -17,15 +17,14 @@ limitations under the License
 
 using System;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+[Flags]
+public enum DnsKeyFlags : ushort
 {
-    [Flags]
-    public enum DnsKeyFlags : ushort
-    {
-        None = 0,
+    None = 0,
 
-        SecureEntryPoint = 1,
+    SecureEntryPoint = 1,
 
-        ZoneKey = 256,
-    }
+    ZoneKey = 256
 }

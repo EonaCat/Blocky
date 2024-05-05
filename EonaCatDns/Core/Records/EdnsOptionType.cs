@@ -15,36 +15,35 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public enum EdnsOptionType : ushort
 {
-    public enum EdnsOptionType : ushort
-    {
-        Nsid = 3,
+    Nsid = 3,
 
-        Dau = 5,
+    Dau = 5,
 
-        Dhu = 6,
+    Dhu = 6,
 
-        N3U = 7,
+    N3U = 7,
 
-        ClientSubnet = 8,
+    ClientSubnet = 8,
 
-        Expire = 9,
+    Expire = 9,
 
-        Cookie = 10,
+    Cookie = 10,
 
-        Keepalive = 11,
+    Keepalive = 11,
 
-        Padding = 12,
+    Padding = 12,
 
-        Chain = 13,
+    Chain = 13,
 
-        KeyTag = 14,
+    KeyTag = 14,
 
-        ExperimentalMin = 65001,
+    ExperimentalMin = 65001,
 
-        ExperimentalMax = 65534,
+    ExperimentalMax = 65534,
 
-        FutureExpansion = 65535
-    }
+    FutureExpansion = 65535
 }

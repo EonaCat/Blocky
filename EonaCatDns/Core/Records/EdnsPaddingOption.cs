@@ -15,30 +15,29 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class EdnsPaddingOption : EdnsOptionBase
 {
-    public class EdnsPaddingOption : EdnsOptionBase
+    public EdnsPaddingOption()
     {
-        public EdnsPaddingOption()
-        {
-            Type = EdnsOptionType.Padding;
-        }
+        Type = EdnsOptionType.Padding;
+    }
 
-        public byte[] Padding { get; set; }
+    public byte[] Padding { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Padding = reader.ReadBytes(length);
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Padding = reader.ReadBytes(length);
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteBytes(Padding);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteBytes(Padding);
+    }
 
-        public override string ToString()
-        {
-            return $";   Padding = {(Padding == null ? "null" : Padding.Length.ToString())}";
-        }
+    public override string ToString()
+    {
+        return $";   Padding = {(Padding == null ? "null" : Padding.Length.ToString())}";
     }
 }

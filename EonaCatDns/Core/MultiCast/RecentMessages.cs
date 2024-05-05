@@ -20,30 +20,29 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace EonaCat.Dns.Core.MultiCast
+namespace EonaCat.Dns.Core.MultiCast;
+
+public class RecentMessages
 {
-    public class RecentMessages
+    public ConcurrentDictionary<string, DateTime> Messages = new();
+
+    public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(1);
+
+    public bool TryAdd(byte[] message)
     {
-        public ConcurrentDictionary<string, DateTime> Messages = new();
+        Cleanup();
+        return Messages.TryAdd(GetId(message), DateTime.Now);
+    }
 
-        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(1);
+    public int Cleanup()
+    {
+        var dead = DateTime.Now - Interval;
+        return Messages.Where(x => x.Value < dead).Count(stale => Messages.TryRemove(stale.Key, out _));
+    }
 
-        public bool TryAdd(byte[] message)
-        {
-            Cleanup();
-            return Messages.TryAdd(GetId(message), DateTime.Now);
-        }
-
-        public int Cleanup()
-        {
-            var dead = DateTime.Now - Interval;
-            return Messages.Where(x => x.Value < dead).Count(stale => Messages.TryRemove(stale.Key, out _));
-        }
-
-        public string GetId(byte[] message)
-        {
-            using HashAlgorithm hasher = SHA256.Create();
-            return Convert.ToBase64String(hasher.ComputeHash(message));
-        }
+    public string GetId(byte[] message)
+    {
+        using HashAlgorithm hasher = SHA256.Create();
+        return Convert.ToBase64String(hasher.ComputeHash(message));
     }
 }

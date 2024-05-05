@@ -15,12 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core
-{
-    public interface IDns
-    {
-        IDns Read(DnsReader reader);
+using System.Threading.Tasks;
 
-        void Write(DnsWriter writer);
-    }
+namespace EonaCat.Dns.Core;
+
+public interface IDns
+{
+    Task<IDns> Read(DnsReader reader);
+
+    void Write(DnsWriter writer);
 }

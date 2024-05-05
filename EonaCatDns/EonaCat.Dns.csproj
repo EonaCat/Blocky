@@ -1,234 +1,243 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
-	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
-		<RootNamespace>EonaCat.Dns</RootNamespace>
-		<ApplicationIcon>icon.ico</ApplicationIcon>
-		<OutputType>Library</OutputType>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<LangVersion>Latest</LangVersion>
-		<Version>4.0.3</Version>
-		<AssemblyVersion>4.0.3</AssemblyVersion>
-		<StartupObject />
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Authors>EonaCat (Jeroen Saey)</Authors>
-		<Description>This is a Dns Server for .NET 7.0 / .NET Core</Description>
-		<Copyright>EonaCat (Jeroen Saey)</Copyright>
-		<PackageReleaseNotes>
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+    <RootNamespace>EonaCat.Dns</RootNamespace>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>Latest</LangVersion>
+    <AssemblyVersion>4.1.6</AssemblyVersion>
+    <StartupObject />
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>EonaCat (Jeroen Saey)</Authors>
+    <Description>This is a Dns Server</Description>
+    <Copyright>EonaCat (Jeroen Saey)</Copyright>
+    <PackageReleaseNotes>
 			Created for Blocky
 			Blocking domains the way you want it.
 			https://blocky.EonaCat.com
 		</PackageReleaseNotes>
-		<IsPackable>true</IsPackable>
-		<PackageProjectUrl>https://blocky.EonaCat.com</PackageProjectUrl>
-		<PackageTags>dns;EonaCat;dns server;statistics;resolver;.NET Core;.NET 7 </PackageTags>
-		<PackageLicenseFile>LICENSE</PackageLicenseFile>
-		<PackageIcon>icon.png</PackageIcon>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<Title>EonaCat.Dns</Title>
+    <IsPackable>true</IsPackable>
+    <PackageProjectUrl>https://blocky.EonaCat.com</PackageProjectUrl>
+    <PackageTags>dns;EonaCat;dns server;statistics;resolver;</PackageTags>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>EonaCat.Dns</Title>
+  </PropertyGroup>
+
+	<PropertyGroup>
+		<EVRevisionFormat>4.1.6+{chash:10}.{c:ymd}</EVRevisionFormat>
+		<EVDefault>true</EVDefault>
+		<EVInfo>true</EVInfo>
+		<EVTagMatch>v[0-9]*</EVTagMatch>
+		<EVRemoveTagV>true</EVRemoveTagV>
+		<EVVcs>git</EVVcs>
+		<EVCheckAllAttributes>true</EVCheckAllAttributes>
+		<EVShowRevision>true</EVShowRevision>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<DefineConstants>TRACE</DefineConstants>
-		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-		<NoWarn>1701;1702;1591</NoWarn>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <NoWarn>1701;1702;1591</NoWarn>
-	</PropertyGroup>
-
-	<ItemGroup>
-		<None Remove="Core\RootNS" />
-		<None Remove="eonacatdns\wwwroot\css\bootstrap_theme.min.css" />
-		<None Remove="eonacatdns\wwwroot\css\colpick.css" />
-		<None Remove="eonacatdns\wwwroot\css\datatables.css" />
-		<None Remove="eonacatdns\wwwroot\css\modal.css" />
-		<None Remove="eonacatdns\wwwroot\js\chart.min.js" />
-		<None Remove="eonacatdns\wwwroot\js\colpick.js" />
-		<None Remove="eonacatdns\wwwroot\js\datatables.min.js" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Content Include="eonacatdns\wwwroot\css\bootstrap.min.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\css\bootstrap_theme.min.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\css\colpick.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\css\datatables.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\css\font-awesome.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\css\main.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\css\modal.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\favicon.ico">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\js\bootstrap.bundle.min.js">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\js\chart.min.js">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\js\colpick.js">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\js\common.js">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\js\datatables.min.js">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\js\jquery.min.js">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.eot">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.svg">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.ttf">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.woff">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.woff2">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.eot">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.svg">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.ttf">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.woff">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.woff2">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.eot">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.svg">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.ttf">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.woff">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.woff2">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-		<Content Include="icon.ico" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<EmbeddedResource Include="Core\RootNS" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
-		<PackageReference Include="EonaCat.Cache.Memory" Version="1.0.1" />
-		<PackageReference Include="EonaCat.Controls" Version="1.0.2" />
-		<PackageReference Include="EonaCat.Extensions.Json" Version="1.0.1" />
-		<PackageReference Include="EonaCat.Helpers" Version="1.0.7" />
-		<PackageReference Include="EonaCat.Json" Version="1.0.3" />
-		<PackageReference Include="EonaCat.Logger" Version="1.2.0" />
-		<PackageReference Include="EonaCat.Network" Version="1.0.9" />
-		<PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
-		<PackageReference Include="System.Runtime.Caching" Version="7.0.0" />
-		<PackageReference Include="WebMarkupMin.AspNetCore7" Version="2.14.1" />
-		<!--<PackageReference Include="Microsoft.AspNetCore.Cryptography.Internal" Version="2.2.0" />
+    <DefineConstants>TRACE</DefineConstants>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Core\RootNS" />
+    <None Remove="eonacatdns\wwwroot\css\bootstrap_theme.min.css" />
+    <None Remove="eonacatdns\wwwroot\css\colpick.css" />
+    <None Remove="eonacatdns\wwwroot\css\datatables.css" />
+    <None Remove="eonacatdns\wwwroot\css\modal.css" />
+    <None Remove="eonacatdns\wwwroot\js\chart.min.js" />
+    <None Remove="eonacatdns\wwwroot\js\colpick.js" />
+    <None Remove="eonacatdns\wwwroot\js\datatables.min.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="eonacatdns\wwwroot\css\bootstrap.min.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\css\bootstrap_theme.min.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\css\colpick.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\css\datatables.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\css\font-awesome.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\css\main.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\css\modal.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\favicon.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\js\bootstrap.bundle.min.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\js\chart.min.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\js\colpick.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\js\common.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\js\datatables.min.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\js\jquery.min.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.eot">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.woff">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-brands-400.woff2">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.eot">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.woff">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-regular-400.woff2">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.eot">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.woff">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="eonacatdns\wwwroot\webfonts\fa-solid-900.woff2">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Core\RootNS" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
+    <PackageReference Include="EonaCat.Cache.Memory" Version="1.0.1" />
+    <PackageReference Include="EonaCat.Controls" Version="1.0.2" />
+    <PackageReference Include="EonaCat.Extensions.Json" Version="1.0.1" />
+    <PackageReference Include="EonaCat.Helpers" Version="1.0.7" />
+    <PackageReference Include="EonaCat.Json" Version="1.0.5" />
+    <PackageReference Include="EonaCat.Logger" Version="1.2.8" />
+    <PackageReference Include="EonaCat.Network" Version="1.1.7" />
+    <PackageReference Include="EonaCat.Versioning" Version="1.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+    <PackageReference Include="System.Runtime.Caching" Version="8.0.0" />
+    <PackageReference Include="WebMarkupMin.AspNetCore6" Version="2.16.0" />
+    <!--<PackageReference Include="Microsoft.AspNetCore.Cryptography.Internal" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="2.2.0" />-->
-	</ItemGroup>
-
-	<ItemGroup>
-		<Content Update="Views\Category\categoryModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\StatsColor\statsColorModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Client\clientModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\BlockList\blockListModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Domain\domainModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Index\Index.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\javascript.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\tabs.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\header.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\loginModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\changePasswordModal.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\logs.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-		<Content Update="Views\Shared\dashboard.cshtml">
-			<Pack>$(IncludeRazorContentInPack)</Pack>
-		</Content>
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="eonacatdns\wwwroot\css\datatables.min.css">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="eonacatdns\wwwroot\images\logo.svg">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="icon.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Update="README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\LICENSE">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\README.md">
-			<Pack>True</Pack>
-			<PackagePath></PackagePath>
-		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="eonacatdns\wwwroot\images\" />
-	</ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Views\Category\categoryModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\StatsColor\statsColorModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Client\clientModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\BlockList\blockListModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Domain\domainModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Index\Index.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\javascript.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\tabs.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\header.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\loginModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\changePasswordModal.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\logs.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+    <Content Update="Views\Shared\dashboard.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="eonacatdns\wwwroot\css\datatables.min.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="eonacatdns\wwwroot\images\logo.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="eonacatdns\wwwroot\images\" />
+  </ItemGroup>
 </Project>

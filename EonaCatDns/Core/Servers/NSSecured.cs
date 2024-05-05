@@ -15,54 +15,55 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using EonaCat.Dns.Core.Records;
 
-namespace EonaCat.Dns.Core.Servers
+namespace EonaCat.Dns.Core.Servers;
+
+// DNSSEC name server.
+internal partial class Ns
 {
-    // DNSSEC name server.
-    internal partial class Ns
+    protected async Task<Message> AddSecurityExtensionsAsync(Message request, Message response)
     {
-        protected async Task<Message> AddSecurityExtensionsAsync(Message request, Message response)
+        // If the requests is not for DNSSEC just return.
+        if (!request.IsDnsSecSupported)
         {
-            // If the requests is not for DNSSEC just return.
-            if (!request.IsDnsSecSupported)
-            {
-                return response;
-            }
-            response.IsDnsSecSupported = true;
-
-            await AddSecurityResourcesAsync(response.Answers).ConfigureAwait(false);
-            await AddSecurityResourcesAsync(response.AuthorityRecords).ConfigureAwait(false);
-            await AddSecurityResourcesAsync(response.AdditionalRecords).ConfigureAwait(false);
-
             return response;
         }
 
-        private async Task AddSecurityResourcesAsync(List<ResourceRecord> resourceRecords)
+        response.IsDnsSecSupported = true;
+
+        await AddSecurityResourcesAsync(response.Answers).ConfigureAwait(false);
+        await AddSecurityResourcesAsync(response.AuthorityRecords).ConfigureAwait(false);
+        await AddSecurityResourcesAsync(response.AdditionalRecords).ConfigureAwait(false);
+
+        return response;
+    }
+
+    private async Task AddSecurityResourcesAsync(List<ResourceRecord> resourceRecords)
+    {
+        var neededSignatures = resourceRecords
+            .Where(r => r.CanonicalName != string.Empty) // ignore pseudo records
+            .GroupBy(r => new { r.CanonicalName, r.Type, r.Class })
+            .Select(g => g.First());
+
+        foreach (var need in neededSignatures)
         {
-            var neededSignatures = resourceRecords
-                .Where(r => r.CanonicalName != string.Empty) // ignore pseudo records
-                .GroupBy(r => new { r.CanonicalName, r.Type, r.Class })
-                .Select(g => g.First());
+            var signatures = new Message();
+            var question = new Question { Name = need.Name, Class = need.Class, Type = RecordType.Rrsig };
 
-            foreach (var need in neededSignatures)
+            if (!await GetAnswerFromCatalogAsync(question, signatures, CancellationToken.None)
+                    .ConfigureAwait(false))
             {
-                var signatures = new Message();
-                var question = new Question { Name = need.Name, Class = need.Class, Type = RecordType.Rrsig };
-
-                if (!await GetAnswerFromCatalogAsync(question, signatures, CancellationToken.None).ConfigureAwait(false))
-                {
-                    continue;
-                }
-
-                resourceRecords.AddRange(signatures.Answers
-                    .OfType<RrsigRecord>()
-                    .Where(r => r.TypeCovered == need.Type));
+                continue;
             }
+
+            resourceRecords.AddRange(signatures.Answers
+                .OfType<RrsigRecord>()
+                .Where(r => r.TypeCovered == need.Type));
         }
     }
 }

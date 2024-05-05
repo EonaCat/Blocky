@@ -15,67 +15,66 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Records;
 using System;
 using System.Collections.Generic;
+using EonaCat.Dns.Core.Records;
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public class UpdateRequirementList : List<ResourceRecord>
 {
-    public class UpdateRequirementList : List<ResourceRecord>
+    public UpdateRequirementList Exist(DomainName name, RecordType type)
     {
-        public UpdateRequirementList Exist(DomainName name, RecordType type)
+        var resourceRecord = new ResourceRecord
         {
-            var resourceRecord = new ResourceRecord
-            {
-                Name = name,
-                Type = type,
-                Class = RecordClass.Any,
-                Ttl = TimeSpan.Zero
-            };
-            Add(resourceRecord);
-            return this;
-        }
+            Name = name,
+            Type = type,
+            Class = RecordClass.Any,
+            Ttl = TimeSpan.Zero
+        };
+        Add(resourceRecord);
+        return this;
+    }
 
-        public UpdateRequirementList Exist(DomainName name)
-        {
-            return Exist(name, RecordType.Any);
-        }
+    public UpdateRequirementList Exist(DomainName name)
+    {
+        return Exist(name, RecordType.Any);
+    }
 
-        public UpdateRequirementList Exist<T>(DomainName name)
-            where T : ResourceRecord, new()
-        {
-            return Exist(name, new T().Type);
-        }
+    public UpdateRequirementList Exist<T>(DomainName name)
+        where T : ResourceRecord, new()
+    {
+        return Exist(name, new T().Type);
+    }
 
-        public UpdateRequirementList Exist(ResourceRecord resource)
-        {
-            resource.Ttl = TimeSpan.Zero;
-            Add(resource);
-            return this;
-        }
+    public UpdateRequirementList Exist(ResourceRecord resource)
+    {
+        resource.Ttl = TimeSpan.Zero;
+        Add(resource);
+        return this;
+    }
 
-        public UpdateRequirementList NotExist(DomainName name, RecordType type)
+    public UpdateRequirementList NotExist(DomainName name, RecordType type)
+    {
+        var resourceRecord = new ResourceRecord
         {
-            var resourceRecord = new ResourceRecord
-            {
-                Name = name,
-                Type = type,
-                Class = RecordClass.None,
-                Ttl = TimeSpan.Zero
-            };
-            Add(resourceRecord);
-            return this;
-        }
+            Name = name,
+            Type = type,
+            Class = RecordClass.None,
+            Ttl = TimeSpan.Zero
+        };
+        Add(resourceRecord);
+        return this;
+    }
 
-        public UpdateRequirementList NotExist(DomainName name)
-        {
-            return NotExist(name, RecordType.Any);
-        }
+    public UpdateRequirementList NotExist(DomainName name)
+    {
+        return NotExist(name, RecordType.Any);
+    }
 
-        public UpdateRequirementList NotExist<T>(DomainName name)
-            where T : ResourceRecord, new()
-        {
-            return NotExist(name, new T().Type);
-        }
+    public UpdateRequirementList NotExist<T>(DomainName name)
+        where T : ResourceRecord, new()
+    {
+        return NotExist(name, new T().Type);
     }
 }

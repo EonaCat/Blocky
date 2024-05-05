@@ -18,55 +18,49 @@ limitations under the License
 using System.Collections.Generic;
 using System.Text;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class TxtRecord : ResourceRecord
 {
-    public class TxtRecord : ResourceRecord
+    public TxtRecord()
     {
-        public TxtRecord()
+        Type = RecordType.Txt;
+    }
+
+    public List<string> Strings { get; set; } = new();
+
+    public override void ReadData(DnsReader reader, int length)
+    {
+        while (length > 0)
         {
-            Type = RecordType.Txt;
+            var s = reader.ReadString();
+            Strings.Add(s);
+            length -= Encoding.UTF8.GetByteCount(s) + 1;
         }
+    }
 
-        public List<string> Strings { get; set; } = new();
+    public override void ReadData(MasterReader reader)
+    {
+        while (!reader.IsEndOfLine()) Strings.Add(reader.ReadString());
+    }
 
-        public override void ReadData(DnsReader reader, int length)
+    public override void WriteData(DnsWriter writer)
+    {
+        foreach (var s in Strings) writer.WriteString(s);
+    }
+
+    public override void WriteData(MasterWriter writer)
+    {
+        var next = false;
+        foreach (var currentString in Strings)
         {
-            while (length > 0)
+            if (next)
             {
-                var s = reader.ReadString();
-                Strings.Add(s);
-                length -= Encoding.UTF8.GetByteCount(s) + 1;
+                writer.WriteSpace();
             }
-        }
 
-        public override void ReadData(MasterReader reader)
-        {
-            while (!reader.IsEndOfLine())
-            {
-                Strings.Add(reader.ReadString());
-            }
-        }
-
-        public override void WriteData(DnsWriter writer)
-        {
-            foreach (var s in Strings)
-            {
-                writer.WriteString(s);
-            }
-        }
-
-        public override void WriteData(MasterWriter writer)
-        {
-            var next = false;
-            foreach (var currentString in Strings)
-            {
-                if (next)
-                {
-                    writer.WriteSpace();
-                }
-                writer.WriteString(currentString, appendSpace: false);
-                next = true;
-            }
+            writer.WriteString(currentString, false);
+            next = true;
         }
     }
 }

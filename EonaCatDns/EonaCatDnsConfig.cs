@@ -18,41 +18,40 @@ limitations under the License
 using System.Collections.Generic;
 using EonaCat.Logger;
 
-namespace EonaCat.Dns
+namespace EonaCat.Dns;
+
+public class EonaCatDnsConfig
 {
-    public class EonaCatDnsConfig
-    {
-        public ELogType LogLevel { get; set; } = ELogType.DEBUG;
-        public string ArpaPostFix => ".arpa";
-        public int StatsRefreshInterval { get; set; }
-        public bool LogBlockedClients { get; set; }
-        public string ListenAddressV6 { get; set; }
-        public string ResolverAddressV6 { get; set; }
-        public List<string> ForwardersV6 { get; set; }
-        public List<string> ForwardersDoH { get; set; }
-        public string ListenAddressV4 { get; set; }
-        public string ResolverAddressV4 { get; set; }
-        public List<string> ForwardersV4 { get; set; }
-        public bool AutoUpdate { get; set; }
-        public int Port { get; set; }
-        public string ApplicationName { get; set; }
-        public string ApplicationVersion { get; set; }
-        public string WebServerIpAddress { get; set; }
-        public int WebServerPort { get; set; }
-        public string[] Resolvers { get; set; }
-        public List<string> DontCacheList { get; set; }
-        public bool EnableAdminInterface { get; set; } = true;
-        public bool IsCacheDisabled { get; set; }
-        public bool ResolveOverDoh { get; set; }
-        public bool ContinueWhenDohFails { get; set; }
-        public bool CreateMasterFileOnBoot { get; set; }
-        public bool IgnoreWpadRequests { get; set; }
-        public bool IgnoreArpaRequests { get; set; }
-        public bool IncludeRawInLogTable { get; set; }
-        public bool IsMultiCastEnabled { get; set; }
-        public string RouterDomain { get; set; }
-        public bool PartialLookupName { get; set; }
-        public bool ProgressToConsole { get; set; }
-        public bool LogInLocalTime { get; set; }
-    }
+    public ELogType LogLevel { get; set; } = ELogType.DEBUG;
+    public string ArpaPostFix => ".arpa";
+    public int StatsRefreshInterval { get; set; }
+    public bool LogBlockedClients { get; set; }
+    public string ListenAddressV6 { get; set; }
+    public string ResolverAddressV6 { get; set; }
+    public List<string> ForwardersV6 { get; set; }
+    public List<string> ForwardersDoH { get; set; }
+    public string ListenAddressV4 { get; set; }
+    public string ResolverAddressV4 { get; set; }
+    public List<string> ForwardersV4 { get; set; }
+    public bool AutoUpdate { get; set; }
+    public int Port { get; set; }
+    public string ApplicationName { get; set; }
+    public string ApplicationVersion { get; set; }
+    public string WebServerIpAddress { get; set; }
+    public int WebServerPort { get; set; }
+    public string[] Resolvers { get; set; }
+    public List<string> DontCacheList { get; set; }
+    public bool EnableAdminInterface { get; set; } = true;
+    public bool IsCacheDisabled { get; set; }
+    public bool ResolveOverDoh { get; set; }
+    public bool ContinueWhenDohFails { get; set; }
+    public bool CreateMasterFileOnBoot { get; set; }
+    public bool IgnoreWpadRequests { get; set; }
+    public bool IgnoreArpaRequests { get; set; }
+    public bool IncludeRawInLogTable { get; set; }
+    public bool IsMultiCastEnabled { get; set; }
+    public string RouterDomain { get; set; }
+    public bool PartialLookupName { get; set; }
+    public bool ProgressToConsole { get; set; }
+    public bool LogInLocalTime { get; set; }
 }

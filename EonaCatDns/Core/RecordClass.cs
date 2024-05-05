@@ -15,20 +15,19 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public enum RecordClass : ushort
 {
-    public enum RecordClass : ushort
-    {
-        Internet = 1,
+    Internet = 1,
 
-        Cs = 2,
+    Cs = 2,
 
-        Ch = 3,
+    Ch = 3,
 
-        Hs = 4,
+    Hs = 4,
 
-        None = 254,
+    None = 254,
 
-        Any = 255
-    }
+    Any = 255
 }

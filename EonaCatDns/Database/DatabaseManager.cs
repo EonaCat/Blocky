@@ -16,45 +16,60 @@ limitations under the License
 
 */
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using EonaCat.Dns.Core;
 using EonaCat.Dns.Core.Helpers;
 using EonaCat.Dns.Database.Models.Entities;
 using EonaCat.Dns.Managers.Stats;
 using EonaCat.Logger;
 using SQLite;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using BlockList = EonaCat.Dns.Database.Models.Entities.BlockList;
 
 namespace EonaCat.Dns.Database;
 
 internal static class DatabaseManager
 {
-    private static SQLiteAsyncConnection Database { get; }
-    private static SQLiteAsyncConnection DatabaseDomain { get; }
-    private static SQLiteAsyncConnection DatabaseLogs { get; }
+    private static readonly string DatabasePath = ConstantsDns.Database.Databasepath;
+    private static readonly string LogsDatabasePath = ConstantsDns.Database.LogsDatabasepath;
+    private static readonly string DomainDatabasePath = ConstantsDns.Database.DomainDatabasepath;
+
+
+    private static readonly SQLiteAsyncConnection Database = new(DatabasePath);
+    private static readonly SQLiteAsyncConnection DatabaseDomain = new(DomainDatabasePath);
+    private static readonly SQLiteAsyncConnection DatabaseLogs = new(LogsDatabasePath);
+
+    internal static readonly SqliteRepository<Domain> Domains = new(DatabaseDomain);
+    internal static readonly SqliteRepository<Setting> Settings = new(Database);
+    internal static readonly SqliteRepository<BlockList> BlockLists = new(Database);
+    internal static readonly SqliteRepository<Client> Clients = new(Database);
+    internal static readonly SqliteRepository<Log> Logs = new(DatabaseLogs);
+    internal static readonly SqliteRepository<Category> Categories = new(Database);
+    internal static readonly SqliteRepository<User> Users = new(Database);
 
     static DatabaseManager()
     {
-        DatabasePath = ConstantsDns.Database.Databasepath;
-        LogsDatabasePath = ConstantsDns.Database.LogsDatabasepath;
-        DomainDatabasePath = ConstantsDns.Database.DomainDatabasepath;
         Database = CreateDatabaseConnection();
         DatabaseDomain = CreateDomainDatabaseConnection();
         DatabaseLogs = CreateLogsDatabaseConnection();
-
-        // Set the repositories
-        Domains = new SqliteRepository<Domain>(CreateDomainDatabaseConnection());
-        Settings = new SqliteRepository<Setting>(CreateDatabaseConnection());
-        BlockLists = new SqliteRepository<BlockList>(CreateDatabaseConnection());
-        Clients = new SqliteRepository<Client>(CreateDatabaseConnection());
-        Logs = new SqliteRepository<Log>(CreateLogsDatabaseConnection());
-        Categories = new SqliteRepository<Category>(CreateDatabaseConnection());
-        Users = new SqliteRepository<User>(CreateDatabaseConnection());
     }
+
+    public static long TotalClients { get; private set; }
+    public static long TotalBlocked { get; private set; }
+    public static long TotalCached { get; private set; }
+    public static long TotalQueries { get; private set; }
+
+    public static long TotalNoError { get; set; }
+
+    public static long TotalServerFailure { get; set; }
+
+    public static long TotalRefused { get; set; }
+
+    internal static event EventHandler<string> OnUpdateBlockList;
+    internal static event EventHandler<Client> OnHostNameResolve;
 
     private static SQLiteAsyncConnection CreateDatabaseConnection()
     {
@@ -73,7 +88,6 @@ internal static class DatabaseManager
 
     internal static async Task CreateTablesAndIndexesAsync()
     {
-        // Create the tables
         await Database.CreateTableAsync<BlockList>().ConfigureAwait(false);
         await Database.CreateTableAsync<Setting>().ConfigureAwait(false);
         await Database.CreateTableAsync<Client>().ConfigureAwait(false);
@@ -82,7 +96,6 @@ internal static class DatabaseManager
         await Database.CreateTableAsync<Category>().ConfigureAwait(false);
         await Database.CreateTableAsync<User>().ConfigureAwait(false);
 
-        // Create the indexes
         await Database.CreateIndexAsync<Category>(x => x.Name).ConfigureAwait(false);
         await Database.CreateIndexAsync<Client>(x => x.Name).ConfigureAwait(false);
         await Database.CreateIndexAsync<Client>(x => x.Ip).ConfigureAwait(false);
@@ -93,27 +106,6 @@ internal static class DatabaseManager
         await DatabaseLogs.CreateIndexAsync<Log>(x => x.Raw).ConfigureAwait(false);
     }
 
-    public static string DatabasePath { get; }
-    public static string LogsDatabasePath { get; }
-    public static string DomainDatabasePath { get; }
-
-    public static event EventHandler<string> OnUpdateBlockList;
-
-    public static event EventHandler<Client> OnHostNameResolve;
-
-    public static SqliteRepository<Domain> Domains { get; }
-    public static SqliteRepository<Setting> Settings { get; }
-    public static SqliteRepository<BlockList> BlockLists { get; }
-    public static SqliteRepository<Client> Clients { get; }
-    public static SqliteRepository<Log> Logs { get; }
-    public static SqliteRepository<Category> Categories { get; }
-    public static SqliteRepository<User> Users { get; }
-
-    public static long TotalClients { get; private set; }
-    public static long TotalBlocked { get; private set; }
-    public static long TotalCached { get; private set; }
-    public static long TotalQueries { get; private set; }
-
     internal static Task<int> GetAllowedDomainsCountAsync()
     {
         return Domains.CountAllAsync(x => x.ListType == ListType.Allowed);
@@ -121,7 +113,8 @@ internal static class DatabaseManager
 
     internal static async Task<HashSet<string>> GetAllowedDomainsAsync()
     {
-        return (await Domains.Where(x => x.ListType == ListType.Allowed).ToArrayAsync().ConfigureAwait(false)).Select(x => x.Url).ToHashSet();
+        return (await Domains.Where(x => x.ListType == ListType.Allowed).ToArrayAsync().ConfigureAwait(false))
+            .Select(x => x.Url).ToHashSet();
     }
 
     internal static Task<int> GetBlockedDomainsCountAsync()
@@ -131,7 +124,8 @@ internal static class DatabaseManager
 
     internal static async Task<HashSet<string>> GetBlockedDomainsAsync()
     {
-        return (await Domains.Where(x => x.ListType == ListType.Blocked).ToArrayAsync().ConfigureAwait(false)).Select(x => x.Url).ToHashSet();
+        return (await Domains.Where(x => x.ListType == ListType.Blocked).ToArrayAsync().ConfigureAwait(false))
+            .Select(x => x.Url).ToHashSet();
     }
 
     internal static Task<int> SettingsCountAsync()
@@ -146,11 +140,12 @@ internal static class DatabaseManager
         try
         {
             name = name.ToUpper();
-            result = await Settings.FirstOrDefaultAsync(x => x.Name == name).ConfigureAwait(false) ?? new Setting { Name = name };
+            result = await Settings.FirstOrDefaultAsync(x => x.Name == name).ConfigureAwait(false) ??
+                     new Setting { Name = name };
         }
         catch (Exception exception)
         {
-            Logger.Log(exception.ToString(), ELogType.ERROR);
+            await Logger.LogAsync(exception.ToString(), ELogType.ERROR).ConfigureAwait(false);
         }
 
         return result;
@@ -162,6 +157,7 @@ internal static class DatabaseManager
         {
             return null;
         }
+
         return await Users.InsertOrUpdateAsync(user).ConfigureAwait(false);
     }
 
@@ -170,18 +166,14 @@ internal static class DatabaseManager
         TotalBlocked = await Logs.CountAllAsync(x => x.IsBlocked).ConfigureAwait(false);
         TotalCached = await Logs.CountAllAsync(x => x.IsFromCache).ConfigureAwait(false);
         TotalRefused = await Logs.CountAllAsync(x => x.ResponseCode == ResponseCode.Refused).ConfigureAwait(false);
-        TotalServerFailure = await Logs.CountAllAsync(x => x.ResponseCode == ResponseCode.ServerFailure).ConfigureAwait(false);
+        TotalServerFailure = await Logs.CountAllAsync(x => x.ResponseCode == ResponseCode.ServerFailure)
+            .ConfigureAwait(false);
         TotalNoError = await Logs.CountAllAsync(x => x.ResponseCode == ResponseCode.NoError).ConfigureAwait(false);
         TotalClients = await Logs.CountAsync("Log", "ClientIp", true).ConfigureAwait(false);
         TotalQueries = await Logs.CountAllAsync().ConfigureAwait(false);
-        return new StatsOverview(TotalBlocked, TotalCached, TotalQueries, TotalClients, TotalRefused, TotalServerFailure, TotalNoError);
+        return new StatsOverview(TotalBlocked, TotalCached, TotalQueries, TotalClients, TotalRefused,
+            TotalServerFailure, TotalNoError);
     }
-
-    public static long TotalNoError { get; set; }
-
-    public static long TotalServerFailure { get; set; }
-
-    public static long TotalRefused { get; set; }
 
     internal static Task<List<User>> GetUsersAsync()
     {
@@ -264,7 +256,7 @@ internal static class DatabaseManager
         }
         catch (Exception exception)
         {
-            Logger.Log(exception.ToString(), ELogType.ERROR);
+            await Logger.LogAsync(exception.ToString(), ELogType.ERROR).ConfigureAwait(false);
         }
 
         return null;

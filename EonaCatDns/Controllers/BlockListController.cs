@@ -16,14 +16,15 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Core;
-using EonaCat.Dns.Database;
-using EonaCat.Dns.Models;
-using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using EonaCat.Dns.Core;
+using EonaCat.Dns.Database;
+using EonaCat.Dns.Models;
+using Microsoft.AspNetCore.Mvc;
+using BlockList = EonaCat.Dns.Database.Models.Entities.BlockList;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -55,16 +56,34 @@ public class BlockListController : ControllerBase
             }
             else
             {
-                query = query.Where(a => (a.Url != null && a.Url.ToLower().Equals(search)) ||
-                                         (a.Name != null && a.Name.Contains(search)));
+                if (search.StartsWith("*") && search.EndsWith("*"))
+                {
+                    query = query.Where(a => (a.Url != null && a.Url.ToLower().Contains(search)) ||
+                                             (a.Name != null && a.Name.ToLower().Contains(search)));
+                }
+                else if (search.StartsWith("*"))
+                {
+                    query = query.Where(a => (a.Url != null && a.Url.ToLower().EndsWith(search)) ||
+                                             (a.Name != null && a.Name.ToLower().EndsWith(search)));
+                }
+                else if (search.EndsWith("*"))
+                {
+                    query = query.Where(a => (a.Url != null && a.Url.ToLower().StartsWith(search)) ||
+                                             (a.Name != null && a.Name.ToLower().StartsWith(search)));
+                }
+                else
+                {
+                    query = query.Where(a => (a.Url != null && a.Url.ToLower().Equals(search)) ||
+                                             (a.Name != null && a.Name.ToLower().Equals(search)));
+                }
             }
         }
 
         var totalRecords = await query.CountAsync().ConfigureAwait(false);
 
         var blockLists = await query.Skip(dataTablesRequest.Start)
-                                    .Take(dataTablesRequest.End)
-                                    .ToListAsync().ConfigureAwait(false);
+            .Take(dataTablesRequest.End)
+            .ToListAsync().ConfigureAwait(false);
 
         var result = blockLists.Select(blockList => new BlockListViewModel
         {
@@ -77,37 +96,55 @@ public class BlockListController : ControllerBase
             LastUpdated = blockList.LastUpdated,
             LastUpdateStartTime = blockList.LastUpdateStartTime,
             TotalEntries = blockList.TotalEntries,
-            IsUpdating = Blocker.RunningBlockerTasks.Any(x => x.Uri.AbsoluteUri == blockList.Url),
+            IsUpdating = Blocker.RunningBlockerTasks.Any(x => x.Uri.AbsoluteUri == blockList.Url)
         }).ToList();
 
         switch (dataTablesRequest.SortColumn)
         {
             case 0:
-                result = isAscending ? result.OrderBy(x => x.Id).ToList() : result.OrderByDescending(x => x.Id).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Id).ToList()
+                    : result.OrderByDescending(x => x.Id).ToList();
                 break;
             case 1:
-                result = isAscending ? result.OrderBy(x => x.Name).ToList() : result.OrderByDescending(x => x.Name).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Name).ToList()
+                    : result.OrderByDescending(x => x.Name).ToList();
                 break;
             case 2:
-                result = isAscending ? result.OrderBy(x => x.Url).ToList() : result.OrderByDescending(x => x.Url).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Url).ToList()
+                    : result.OrderByDescending(x => x.Url).ToList();
                 break;
             case 3:
-                result = isAscending ? result.OrderBy(x => x.IsEnabled).ToList() : result.OrderByDescending(x => x.IsEnabled).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.IsEnabled).ToList()
+                    : result.OrderByDescending(x => x.IsEnabled).ToList();
                 break;
             case 4:
-                result = isAscending ? result.OrderBy(x => x.LastResult).ToList() : result.OrderByDescending(x => x.LastResult).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.LastResult).ToList()
+                    : result.OrderByDescending(x => x.LastResult).ToList();
                 break;
             case 5:
-                result = isAscending ? result.OrderBy(x => x.LastUpdated).ToList() : result.OrderByDescending(x => x.LastUpdated).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.LastUpdated).ToList()
+                    : result.OrderByDescending(x => x.LastUpdated).ToList();
                 break;
             case 6:
-                result = isAscending ? result.OrderBy(x => x.LastUpdateStartTime).ToList() : result.OrderByDescending(x => x.LastUpdateStartTime).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.LastUpdateStartTime).ToList()
+                    : result.OrderByDescending(x => x.LastUpdateStartTime).ToList();
                 break;
             default:
                 result = dataTablesRequest.SortColumn switch
                 {
-                    6 => isAscending ? result.OrderBy(x => x.CreationDate).ToList() : result.OrderByDescending(x => x.CreationDate).ToList(),
-                    7 => isAscending ? result.OrderBy(x => x.TotalEntries).ToList() : result.OrderByDescending(x => x.TotalEntries).ToList(),
+                    6 => isAscending
+                        ? result.OrderBy(x => x.CreationDate).ToList()
+                        : result.OrderByDescending(x => x.CreationDate).ToList(),
+                    7 => isAscending
+                        ? result.OrderBy(x => x.TotalEntries).ToList()
+                        : result.OrderByDescending(x => x.TotalEntries).ToList(),
                     _ => result
                 };
                 break;
@@ -124,6 +161,7 @@ public class BlockListController : ControllerBase
             RedirectToAction("Index");
             return null;
         }
+
         return PartialView("../BlockList/Index");
     }
 
@@ -135,7 +173,7 @@ public class BlockListController : ControllerBase
             RedirectToAction("Index");
             return Task.FromResult<ActionResult>(null);
         }
-        
+
         Server.WatchMode = !Server.WatchMode;
         return Task.FromResult<ActionResult>(RedirectToAction("Index"));
     }
@@ -149,10 +187,11 @@ public class BlockListController : ControllerBase
         }
 
         var isNew = blockList.Id == 0;
-        Database.Models.Entities.BlockList databaseBlockList = null;
+        BlockList databaseBlockList = null;
         if (!isNew)
         {
-            databaseBlockList = await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == blockList.Id).ConfigureAwait(false);
+            databaseBlockList = await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == blockList.Id)
+                .ConfigureAwait(false);
         }
 
         if (databaseBlockList != null)
@@ -163,7 +202,7 @@ public class BlockListController : ControllerBase
         }
         else
         {
-            databaseBlockList = new Database.Models.Entities.BlockList
+            databaseBlockList = new BlockList
             {
                 Name = blockList.Name,
                 CreationDate = DateTime.Now.ToString(CultureInfo.InvariantCulture),
@@ -186,11 +225,13 @@ public class BlockListController : ControllerBase
             return Content("OK");
         }
 
-        long.TryParse(id, out var result);
+        _ = long.TryParse(id, out var result);
         var isNew = result == 0;
 
         BlockListViewModel model = null;
-        var blockList = isNew ? null : await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == result).ConfigureAwait(false);
+        var blockList = isNew
+            ? null
+            : await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == result).ConfigureAwait(false);
 
         if (blockList != null)
         {
@@ -224,13 +265,14 @@ public class BlockListController : ControllerBase
             return null;
         }
 
-        long.TryParse(id, out var blockListId);
+        _ = long.TryParse(id, out var blockListId);
         if (blockListId <= 0)
         {
             return RedirectToAction("Index");
         }
 
-        var blockList = await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == blockListId).ConfigureAwait(false);
+        var blockList = await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == blockListId)
+            .ConfigureAwait(false);
         if (blockList != null)
         {
             DatabaseManager.UpdateBlockList(blockList.Url);
@@ -248,13 +290,14 @@ public class BlockListController : ControllerBase
             return null;
         }
 
-        long.TryParse(id, out var blockListId);
+        _ = long.TryParse(id, out var blockListId);
         if (blockListId <= 0)
         {
             return RedirectToAction("Index");
         }
 
-        var blockList = await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == blockListId).ConfigureAwait(false);
+        var blockList = await DatabaseManager.BlockLists.FirstOrDefaultAsync(x => x.Id == blockListId)
+            .ConfigureAwait(false);
         if (blockList != null)
         {
             await DatabaseManager.BlockLists.DeleteAsync(blockList).ConfigureAwait(false);

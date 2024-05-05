@@ -16,6 +16,13 @@ limitations under the License
 
 */
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using EonaCat.Dns.Converters;
 using EonaCat.Dns.Core.Extensions;
 using EonaCat.Dns.Core.Helpers;
@@ -28,13 +35,7 @@ using EonaCat.Helpers.Extensions;
 using EonaCat.Json;
 using EonaCat.Logger;
 using EonaCat.Network;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading.Tasks;
+
 #pragma warning disable CS1591
 
 namespace EonaCat.Dns.Core;
@@ -42,17 +43,21 @@ namespace EonaCat.Dns.Core;
 public class Server
 {
     private static EonaCatDnsConfig _config;
-    private Ns _ns;
-    private SocketUdpServer _socketServerUdpV4;
-    private SocketTcpServer _socketServerTcpV4;
-    private SocketUdpServer _socketServerUdpV6;
-    private SocketTcpServer _socketServerTcpV6;
-
-    public static long TotalRequests { get; set; }
     private static readonly object TotalRequestsLock = new();
     private static readonly object TotalBlockedLock = new();
+    private Ns _ns;
+    private SocketTcpServer _socketServerTcpV4;
+    private SocketTcpServer _socketServerTcpV6;
+    private SocketUdpServer _socketServerUdpV4;
+    private SocketUdpServer _socketServerUdpV6;
+
+    public static long TotalRequests { get; set; }
     public static long TotalBlocked { get; set; }
     public bool IsRunning { get; private set; }
+
+    public static bool WatchMode { get; set; }
+
+    public string MasterFile => "masterFile.txt";
 
     private async Task ProcessQueryAsync(Message message, RemoteInfo remote)
     {
@@ -62,41 +67,40 @@ public class Server
 
         if (databaseClient == null)
         {
-            Logger.Log($"Query rejected for '{clientIp}' (no databaseClient)", ELogType.ERROR);
+            await Logger.LogAsync($"Query rejected for '{clientIp}' (no databaseClient)", ELogType.ERROR)
+                .ConfigureAwait(false);
             return;
         }
 
-        var names = string.Join(", ", message.Questions.Select(currentQuestion => $"{currentQuestion.Name} {currentQuestion.Type}"));
-        var clientName = !string.IsNullOrEmpty(databaseClient.Name) ? $" [{databaseClient.Name}] " : string.Empty;
+        var names = string.Join(", ", message.Questions.Select(q => $"{q.Name} {q.Type}"));
+        var clientName = string.IsNullOrEmpty(databaseClient.Name) ? string.Empty : $" [{databaseClient.Name}] ";
 
-        if (message.Questions.FirstOrDefault() is not Question question)
+        if (!(message.Questions.FirstOrDefault() is Question question))
+            // If we dont have a question to process return
         {
             return;
         }
 
         if (!question.IsRouterDomain && !question.IsArpa)
         {
-            Logger.Log($"Query from {clientIp}:{clientPort} {clientName} {Environment.NewLine}{names}");
+            await Logger.LogAsync($"Query from {clientIp}:{clientPort}{clientName}{Environment.NewLine}{names}")
+                .ConfigureAwait(false);
         }
 
-        var blockingTasks = new Task<bool>[]
-        {
-        CheckIfClientIsBlockedAsync(message, remote, databaseClient, names),
-        CheckIfQuestionIsBlockedAsync(message, remote, databaseClient),
-        IgnoreArpaRequests(message) ? Task.FromResult(true) : Task.FromResult(false),
-        IgnoreWpadRequests(message) ? Task.FromResult(true) : Task.FromResult(false)
-        };
+        var blockingTasks = await Task.WhenAll(
+            CheckIfClientIsBlockedAsync(message, remote, databaseClient, names),
+            CheckIfQuestionIsBlockedAsync(message, remote, databaseClient),
+            Task.FromResult(IgnoreArpaRequests(message)),
+            Task.FromResult(IgnoreWpadRequests(message))
+        ).ConfigureAwait(false);
 
-        var isBlockedResults = await Task.WhenAll(blockingTasks).ConfigureAwait(false);
-        var isClientBlocked = isBlockedResults[0];
-        var isQuestionBlocked = isBlockedResults[1];
-        var ignoreArpa = isBlockedResults[2];
-        var ignoreWpad = isBlockedResults[3];
+        var isBlocked = blockingTasks.Any(b => b);
 
-        if (isClientBlocked || isQuestionBlocked || ignoreArpa || ignoreWpad)
+        if (isBlocked)
         {
             message.IsBlocked = true;
-            await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient).ConfigureAwait(false);
+            await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient)
+                .ConfigureAwait(false);
             return;
         }
 
@@ -104,70 +108,64 @@ public class Server
         {
             if (!message.HasAnswers)
             {
-                var originalMessage = message;
-                var localMessageTask = await _ns.QueryAsync(message).ConfigureAwait(false);
+                var localMessage = await _ns.QueryAsync(message).ConfigureAwait(false);
 
-                if (localMessageTask.HasAnswerRecords && !InWontCacheList(localMessageTask))
+                if (localMessage.HasAnswerRecords && !InWontCacheList(localMessage))
                 {
-                    message = localMessageTask;
+                    message = localMessage;
                 }
 
                 if (!message.HasAnswers)
                 {
                     if (question.Type == RecordType.Ptr && question.IsArpa)
                     {
-                        if (TryGetArpaRecord(question.Name, out var records))
-                        {
-                            message.Answers.AddRange(records);
-                        }
-                        else
+                        if (!TryGetArpaRecord(question.Name, out var records))
                         {
                             await LogAndSendMessageAsync(message, remote, databaseClient).ConfigureAwait(false);
                             return;
                         }
+
+                        message.Answers.AddRange(records);
                     }
-
-                    if (!string.IsNullOrEmpty(_config.RouterDomain))
+                    else
                     {
-                        StripRouterDomain(question);
-                    }
-
-                    var ptrRecords = GetAuthoritativePtrRecords();
-                    var record = GetMatchingPtrRecord(ptrRecords, question);
-
-                    if (record != null)
-                    {
-                        AddIpAddressAnswer(message, record);
-                    }
-
-                    if (!message.HasAnswers && !question.IsArpa && !question.IsRouterDomain)
-                    {
-                        message = await ResolveHelper.ResolveOverDohAsync(message).ConfigureAwait(false);
-                        message = await ResolveHelper.ResolveOverDnsAsync(message).ConfigureAwait(false);
-
-                        if (message != null && message.HasAnswers)
+                        if (!string.IsNullOrEmpty(_config.RouterDomain))
                         {
-                            _ns.CacheAnswer(question.ToString(), message.Answers);
+                            StripRouterDomain(question);
+                        }
+
+                        var ptrRecords = GetAuthoritativePtrRecords();
+                        var record = GetMatchingPtrRecord(ptrRecords, question);
+
+                        if (record != null)
+                        {
+                            AddIpAddressAnswer(message, record);
+                        }
+
+                        if (!message.HasAnswers && !question.IsArpa && !question.IsRouterDomain)
+                        {
+                            message = await ResolveHelper.ResolveOverDohAsync(message).ConfigureAwait(false);
+                            message = await ResolveHelper.ResolveOverDnsAsync(message).ConfigureAwait(false);
+
+                            if (message != null && message.HasAnswers)
+                            {
+                                _ns.CacheAnswer(question.ToString(), message.Answers);
+                            }
                         }
                     }
                 }
 
-                if (message == null)
-                {
-                    await SendToClientAsync(originalMessage, remote).ConfigureAwait(false);
-                    await UpdateStatsForQueryAsync(originalMessage, remote, question.Name.ToString(), databaseClient).ConfigureAwait(false);
-                    return;
-                }
+                await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient)
+                    .ConfigureAwait(false);
             }
         }
         catch (Exception exception)
         {
-            Logger.Log(exception);
+            await Logger.LogAsync(exception).ConfigureAwait(false);
         }
 
         await LogAndSendMessageAsync(message, remote, databaseClient).ConfigureAwait(false);
     }
-
 
     private bool TryGetArpaRecord(DomainName name, out IEnumerable<ResourceRecord> records)
     {
@@ -194,7 +192,10 @@ public class Server
     {
         var routerDomain = _config.RouterDomain;
         var questionName = question.Name.ToString();
-        if (!questionName.EndsWith(routerDomain)) return;
+        if (!questionName.EndsWith(routerDomain))
+        {
+            return;
+        }
 
         questionName = questionName.Remove(questionName.Length - routerDomain.Length);
         if (questionName.EndsWith('.'))
@@ -234,7 +235,7 @@ public class Server
         message.Header.AuthoritativeAnswer = AuthoritativeAnswer.Authoritative;
         if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
         {
-            message.Answers.Add(new AaaaRecord()
+            message.Answers.Add(new AaaaRecord
             {
                 Name = record.DomainName,
                 Type = RecordType.Aaaa,
@@ -261,11 +262,13 @@ public class Server
 
     private static bool InWontCacheList(Message localMessage)
     {
-        return _config.DontCacheList.Any() && localMessage.Questions.Exists(x => _config.DontCacheList.Contains(x.Name.ToString().ToLower()));
+        return _config.DontCacheList.Any() &&
+               localMessage.Questions.Exists(x => _config.DontCacheList.Contains(x.Name.ToString().ToLower()));
     }
 
 
-    private async Task<bool> CheckIfClientIsBlockedAsync(Message message, RemoteInfo remote, Client databaseClient, string names)
+    private async Task<bool> CheckIfClientIsBlockedAsync(Message message, RemoteInfo remote, Client databaseClient,
+        string names)
     {
         if (databaseClient == null || !databaseClient.IsBlocked)
         {
@@ -274,14 +277,15 @@ public class Server
 
         if (_config.LogBlockedClients)
         {
-            Logger.Log($"Received query from {remote.Address}:{remote.Port}{Environment.NewLine}for {names}, but the client is blocked, ignoring!", ELogType.WARNING);
+            await Logger.LogAsync(
+                $"Received query from {remote.Address}:{remote.Port}{Environment.NewLine}for {names}, but the client is blocked, ignoring!",
+                ELogType.WARNING).ConfigureAwait(false);
         }
 
         // Send back to client
         await SendToClientAsync(message, remote).ConfigureAwait(false);
         return true;
     }
-
 
     private async Task<bool> CheckIfQuestionIsBlockedAsync(Message message, RemoteInfo client, Client databaseClient)
     {
@@ -295,15 +299,17 @@ public class Server
 
             if (WatchMode)
             {
-                Logger.Log($"Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, allowing because watchMode is turned on!",
-                    ELogType.WARNING);
+                await Logger.LogAsync(
+                    $"Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, allowing because watchMode is turned on!",
+                    ELogType.WARNING).ConfigureAwait(false);
                 continue;
             }
 
             IncrementBlockedRequests();
 
             // Get the question from the database
-            var domain = await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Url == questionUrl).ConfigureAwait(false);
+            var domain = await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Url == questionUrl)
+                .ConfigureAwait(false);
             if (domain == null || !IPAddress.TryParse(domain.ForwardIp, out var redirectionAddress))
             {
                 continue;
@@ -319,20 +325,19 @@ public class Server
                 TimeCreated = question.TimeCreated,
                 Name = question.Name,
                 Ttl = TimeSpan.MaxValue,
-                Type = question.Type,
+                Type = question.Type
             });
 
             await SendToClientAsync(message, client).ConfigureAwait(false);
 
-            Logger.Log($"Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, ignoring!",
-                ELogType.WARNING);
+            await Logger.LogAsync(
+                $"Received query from {client.Address}:{client.Port}{Environment.NewLine}for {questionUrl}, but the domain is blocked, ignoring!",
+                ELogType.WARNING).ConfigureAwait(false);
             return true;
         }
 
         return false;
     }
-
-    public static bool WatchMode { get; set; }
 
     private static bool IgnoreWpadRequests(Message message)
     {
@@ -354,40 +359,42 @@ public class Server
         }
 
         if (message.HasAnswers)
-        {
             // Send back to client
+        {
             await SendToClientAsync(message, remote).ConfigureAwait(false);
         }
 
         foreach (var question in message.Questions)
         {
-            Logger.Log(
-                message.IsFromCache
-                    ? $"Cached response send to {remote.Address}:{remote.Port} for {question.Name}"
-                    : $"{message.ResolveType} Response send to {remote.Address}:{remote.Port} for {question.Name}");
+            await Logger.LogAsync(
+                    message.IsFromCache
+                        ? $"Cached response send to {remote.Address}:{remote.Port} for {question.Name}"
+                        : $"{message.ResolveType} Response send to {remote.Address}:{remote.Port} for {question.Name}")
+                .ConfigureAwait(false);
 
-            await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient).ConfigureAwait(false);
+            await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient)
+                .ConfigureAwait(false);
         }
     }
 
-    public string MasterFile => "masterFile.txt";
-
-    private async Task UpdateStatsForQueryAsync(Message message, RemoteInfo remote, string questionUrl, Client databaseClient)
+    private static async Task UpdateStatsForQueryAsync(Message message, RemoteInfo remote, string questionUrl,
+        Client databaseClient)
     {
         // Add the domain to the database and update the statistics
         await AddDomainToDatabaseAsync(questionUrl).ConfigureAwait(false);
         await LogQueryMessageAsync(message, remote, questionUrl, databaseClient).ConfigureAwait(false);
     }
 
-    private static async Task LogQueryMessageAsync(Message message, RemoteInfo remote, string questionUrl, Client databaseClient)
+    private static async Task LogQueryMessageAsync(Message message, RemoteInfo remote, string questionUrl,
+        Client databaseClient)
     {
         if (databaseClient != null)
         {
             // Update stats
             var resultType = Log.ResultType.Success;
             if (databaseClient.IsBlocked || message.IsBlocked)
-            {
                 // The request was Blocked
+            {
                 resultType = Log.ResultType.Blocked;
             }
 
@@ -404,7 +411,7 @@ public class Server
             {
                 if (_config.IncludeRawInLogTable)
                 {
-                    log.Raw = JsonHelper.ToJson(message, Formatting.None, converters: new IpAddressConverter());
+                    log.Raw = JsonHelper.ToJson(message, Formatting.None, new IpAddressConverter());
                 }
 
                 await DatabaseManager.Logs.InsertOrUpdateAsync(log).ConfigureAwait(false);
@@ -428,19 +435,18 @@ public class Server
                 Url = questionUrl,
                 ForwardIp = Blocker.Setup != null
                     ? Blocker.Setup.RedirectionAddress
-                    : ConstantsDns.DefaultRedirectionAddress,
+                    : ConstantsDns.DefaultRedirectionAddress
             };
             await DatabaseManager.Domains.InsertOrUpdateAsync(questionDomain).ConfigureAwait(false);
         }
     }
 
-    private async Task SendToClientAsync(Message message, RemoteInfo remoteIpEndpoint)
+    private async Task SendToClientAsync(RecordBase record, RemoteInfo remoteIpEndpoint)
     {
         try
         {
-
-            var bytes = message.ToByteArray();
-            if (remoteIpEndpoint.IsIpv6)
+            var bytes = record.ToByteArray();
+            if (remoteIpEndpoint.IsIPv6)
             {
                 if (remoteIpEndpoint.IsTcp)
                 {
@@ -463,11 +469,12 @@ public class Server
                 }
             }
 
-            MessageHelper.PrintPacketDetails(bytes.Length, bytes, "Outgoing response");
+            await MessageHelper.PrintPacketDetails(bytes.Length, bytes, "Outgoing response").ConfigureAwait(false);
         }
         catch (Exception exception)
         {
-            Logger.Log("Could not send response: " + exception.Message, ELogType.ERROR);
+            await Logger.LogAsync("Could not send response: " + exception.Message, ELogType.ERROR)
+                .ConfigureAwait(false);
         }
     }
 
@@ -479,10 +486,10 @@ public class Server
         return this;
     }
 
-    public Task RestartAsync()
+    public async Task RestartAsync()
     {
-        Stop();
-        return StartAsync();
+        await Stop().ConfigureAwait(false);
+        await StartAsync().ConfigureAwait(false);
     }
 
     public async Task StartAsync()
@@ -496,7 +503,8 @@ public class Server
         {
             if (!ipAddresses.Contains(IPAddress.Parse(_config.ListenAddressV4)))
             {
-                Logger.Log("Invalid ipV4 address specified in the configuration file", ELogType.WARNING);
+                await Logger.LogAsync("Invalid ipV4 address specified in the configuration file", ELogType.WARNING)
+                    .ConfigureAwait(false);
                 Console.WriteLine("Valid values are: ");
                 ipAddresses.Where(x => x.AddressFamily != AddressFamily.InterNetworkV6)
                     .ForEach(x => Console.WriteLine(x.ToString()));
@@ -511,7 +519,8 @@ public class Server
         {
             if (_config.ListenAddressV6 != "::1" && !ipAddresses.Contains(IPAddress.Parse(_config.ListenAddressV6)))
             {
-                Logger.Log("Invalid ipV6 address specified in the configuration file", ELogType.WARNING);
+                await Logger.LogAsync("Invalid ipV6 address specified in the configuration file", ELogType.WARNING)
+                    .ConfigureAwait(false);
                 Console.WriteLine("Valid values are: ");
                 Console.WriteLine("::1");
                 ipAddresses.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)
@@ -525,53 +534,70 @@ public class Server
 
         if (hasValidIpV4 || hasValidIpV6)
         {
-            await CreateDnsServerAsync().ConfigureAwait(false);
-            StartMultiCastService();
+            await Task.Run(CreateDnsServerAsync).ConfigureAwait(false);
+            await Task.Run(StartMultiCastService).ConfigureAwait(false);
 
             if (hasValidIpV4)
             {
-                StartServerV4();
+                await Task.Run(StartServerV4).ConfigureAwait(false);
             }
 
             if (hasValidIpV6)
             {
-                StartServerV6();
+                await Task.Run(StartServerV6).ConfigureAwait(false);
             }
 
-            OutputStartupMessage();
+            await OutputStartupMessage().ConfigureAwait(false);
             IsRunning = true;
         }
         else
         {
-            Logger.Log("There was no valid ipV4 address or ipV6 address found to bind to, please check configuration", ELogType.ERROR);
+            await Logger.LogAsync(
+                "There was no valid ipV4 address or ipV6 address found to bind to, please check configuration",
+                ELogType.ERROR).ConfigureAwait(false);
         }
     }
 
-    private void StartServerV6()
+    private async Task StartServerV6()
     {
         _socketServerUdpV6 = new SocketUdpServer(_config.ListenAddressV6, 53);
-        _socketServerUdpV6.OnReceive += SocketServer_OnReceived;
+        _socketServerUdpV6.OnReceive += _socketServerUdpV6_OnReceive;
         _ = Task.Run(() => _socketServerUdpV6.StartAsync().ConfigureAwait(false));
 
         _socketServerTcpV6 = new SocketTcpServer(_config.ListenAddressV6, 53);
-        _socketServerTcpV6.OnReceive += SocketServer_OnReceived;
+        _socketServerTcpV6.OnReceive += _socketServerTcpV6_OnReceive;
         _ = Task.Run(() => _socketServerTcpV6.StartAsync().ConfigureAwait(false));
-        Logger.Log($"EonaCatDns started listening on {_config.ListenAddressV6}:53");
+        await Logger.LogAsync($"EonaCatDns started listening on {_config.ListenAddressV6}:53").ConfigureAwait(false);
     }
 
-    private void StartServerV4()
+    private void _socketServerTcpV6_OnReceive(RemoteInfo remoteInfo, string nickName)
+    {
+        Task.Run(() => StartQueryAsync(remoteInfo).ConfigureAwait(false));
+    }
+
+    private void _socketServerUdpV6_OnReceive(RemoteInfo remoteInfo)
+    {
+        Task.Run(() => StartQueryAsync(remoteInfo).ConfigureAwait(false));
+    }
+
+    private async Task StartServerV4()
     {
         _socketServerUdpV4 = new SocketUdpServer(_config.ListenAddressV4, 53);
-        _socketServerUdpV4.OnReceive += SocketServer_OnReceived;
+        _socketServerUdpV4.OnReceive += _socketServerUdpV4_OnReceive;
         _ = Task.Run(() => _socketServerUdpV4.StartAsync().ConfigureAwait(false));
 
         _socketServerTcpV4 = new SocketTcpServer(_config.ListenAddressV4, 53);
-        _socketServerTcpV4.OnReceive += SocketServer_OnReceived;
+        _socketServerTcpV4.OnReceive += _socketServerTcpV4_OnReceive;
         _ = Task.Run(() => _socketServerTcpV4.StartAsync().ConfigureAwait(false));
-        Logger.Log($"EonaCatDns started listening on {_config.ListenAddressV4}:53");
+        await Logger.LogAsync($"EonaCatDns started listening on {_config.ListenAddressV4}:53").ConfigureAwait(false);
     }
 
-    private void SocketServer_OnReceived(RemoteInfo remoteInfo)
+    private void _socketServerTcpV4_OnReceive(RemoteInfo remoteInfo, string nickName)
+    {
+        Task.Run(() => StartQueryAsync(remoteInfo).ConfigureAwait(false));
+    }
+
+    private void _socketServerUdpV4_OnReceive(RemoteInfo remoteInfo)
     {
         Task.Run(() => StartQueryAsync(remoteInfo).ConfigureAwait(false));
     }
@@ -609,45 +635,47 @@ public class Server
             }
 
             if (remoteInfo.Data.Length < DnsHeader.HeaderSize)
-            {
                 // Invalid package
+            {
                 return;
             }
 
             var data = remoteInfo.Data;
-            var message = MessageHelper.GetMessageFromBytes(data);
+            var message = await MessageHelper.GetMessageFromBytes(data).ConfigureAwait(false);
 
             if (!message.Questions.Any())
             {
                 // We need to have at least 1 question
-                MessageHelper.PrintPacketDetails(data.Length, data, "Invalid record", true, true);
+                await MessageHelper.PrintPacketDetails(data.Length, data, "Invalid record", true, true)
+                    .ConfigureAwait(false);
                 return;
             }
 
-            MessageHelper.PrintPacketDetails(data.Length, data, $"Incoming request {message.OperationCode}");
+            await MessageHelper.PrintPacketDetails(data.Length, data, $"Incoming request {message.OperationCode}")
+                .ConfigureAwait(false);
 
             // Process the message
             switch (message.OperationCode)
             {
                 case OperationCode.Query:
-                    await ProcessQueryAsync(message, remoteInfo).ConfigureAwait(false);
+                    await Task.Run(() => { ProcessQueryAsync(message, remoteInfo).ConfigureAwait(false); });
                     IncrementTotalRequests();
                     break;
 
                 case OperationCode.InverseQuery:
-                    Logger.Log("InverseQuery ignored");
+                    await Logger.LogAsync("InverseQuery ignored").ConfigureAwait(false);
                     break;
 
                 case OperationCode.Status:
-                    Logger.Log("Status ignored");
+                    await Logger.LogAsync("Status ignored").ConfigureAwait(false);
                     break;
 
                 case OperationCode.Notify:
-                    Logger.Log("Notify ignored");
+                    await Logger.LogAsync("Notify ignored").ConfigureAwait(false);
                     break;
 
                 case OperationCode.Update:
-                    Logger.Log("Update ignored");
+                    await Logger.LogAsync("Update ignored").ConfigureAwait(false);
                     break;
 
                 default:
@@ -656,12 +684,12 @@ public class Server
         }
         catch (Exception ex)
         {
-            Logger.Log(ex, writeToConsole: false);
+            await Logger.LogAsync(ex, writeToConsole: false).ConfigureAwait(false);
         }
     }
 
 
-    private static void StartMultiCastService()
+    private static async Task StartMultiCastService()
     {
         if (!_config.IsMultiCastEnabled)
         {
@@ -673,8 +701,8 @@ public class Server
             return;
         }
 
-        Task.Run(() => MultiCastDnsHelper.StartAsync(_config.LogLevel, _config.LogInLocalTime));
-        Logger.Log("MultiCast service started");
+        await MultiCastDnsHelper.StartAsync(_config.LogLevel, _config.LogInLocalTime).ConfigureAwait(false);
+        await Logger.LogAsync("MultiCast service started").ConfigureAwait(false);
     }
 
     private async Task CreateDnsServerAsync()
@@ -696,15 +724,15 @@ public class Server
         }
         catch (Exception exception)
         {
-            Logger.Log($"Could not load MasterFile {exception.Message}");
+            await Logger.LogAsync($"Could not load MasterFile {exception.Message}").ConfigureAwait(false);
         }
 
         _ns = new Ns
         {
-            IsCacheDisabled = _config.IsCacheDisabled
+            IsCacheDisabled = _config.IsCacheDisabled,
+            Catalog = await Catalog.GenerateCatalog(masterFileContents).ConfigureAwait(false)
         };
 
-        _ns.Catalog = Catalog.GenerateCatalog(masterFileContents);
         DatabaseManager.OnHostNameResolve -= DatabaseManager_OnHostNameResolve;
         DatabaseManager.OnHostNameResolve += DatabaseManager_OnHostNameResolve;
     }
@@ -718,7 +746,7 @@ public class Server
 
         lock (_ns.Catalog)
         {
-            if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+            if (_ns.Catalog.ToList().Any(x => x.Value.Name == clientIp.GetArpaName()))
             {
                 return;
             }
@@ -757,8 +785,16 @@ public class Server
 
         lock (_ns.Catalog)
         {
-            if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+            try
             {
+                if (_ns.Catalog.Any(x => x.Value.Name == clientIp.GetArpaName()))
+                {
+                    return;
+                }
+            }
+            catch (Exception exception)
+            {
+                _ = Logger.LogAsync(exception);
                 return;
             }
         }
@@ -773,22 +809,23 @@ public class Server
         }
     }
 
-    private static void OutputStartupMessage()
+    private static async Task OutputStartupMessage()
     {
         var cacheDisabledMessage = _config.IsCacheDisabled ? "(Caching disabled)" : string.Empty;
         var resolveType = _config.ResolveOverDoh ? "(Resolving queries over DoH) " : string.Empty;
         var multiCastMessage = _config.IsMultiCastEnabled ? "(MultiCast enabled) " : string.Empty;
-        Logger.Log($"{DllInfo.Name} started {cacheDisabledMessage} {resolveType} {multiCastMessage}");
+        await Logger.LogAsync($"{DllInfo.Name} started {cacheDisabledMessage} {resolveType} {multiCastMessage}")
+            .ConfigureAwait(false);
     }
 
-    public void Stop()
+    public async Task Stop()
     {
-        StopMultiCastService();
-        Logger.Log($"{DllInfo.Name} stopped");
+        await StopMultiCastService().ConfigureAwait(false);
+        await Logger.LogAsync($"{DllInfo.Name} stopped").ConfigureAwait(false);
         IsRunning = false;
     }
 
-    private static void StopMultiCastService()
+    private static async Task StopMultiCastService()
     {
         if (!_config.IsMultiCastEnabled)
         {
@@ -799,8 +836,9 @@ public class Server
         {
             return;
         }
+
         MultiCastDnsHelper.Stop();
-        Logger.Log("MultiCast service stopped");
+        await Logger.LogAsync("MultiCast service stopped").ConfigureAwait(false);
     }
 
     public static Task MultiCastAsync(string[] args, bool appExitAfterCommand = true,
@@ -815,7 +853,8 @@ public class Server
         return NetworkScanHelper.ResolveAsync(args, appExitAfterCommand, onlyExitAfterKeypress);
     }
 
-    public static Task NsLookupAsync(string[] args, bool resolveOverDoh = true, bool appExitAfterCommand = true, bool onlyExitAfterKeyPress = true)
+    public static Task NsLookupAsync(string[] args, bool resolveOverDoh = true, bool appExitAfterCommand = true,
+        bool onlyExitAfterKeyPress = true)
     {
         return NsLookupHelper.ResolveAsync(args, resolveOverDoh, appExitAfterCommand, onlyExitAfterKeyPress);
     }

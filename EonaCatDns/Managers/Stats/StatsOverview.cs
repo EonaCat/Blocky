@@ -20,7 +20,8 @@ namespace EonaCat.Dns.Managers.Stats;
 
 public class StatsOverview
 {
-    public StatsOverview(long totalBlocked, long totalCached, long totalQueries, long clients, long totalRefused, long totalServerFailure, long totalNoError)
+    public StatsOverview(long totalBlocked, long totalCached, long totalQueries, long clients, long totalRefused,
+        long totalServerFailure, long totalNoError)
     {
         TotalBlockList = Blocker.TotalBlocked;
         TotalAllowList = Blocker.TotalAllowed;

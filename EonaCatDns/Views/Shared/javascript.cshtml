@@ -25,15 +25,13 @@
     var refreshTimerHandle;
     var isadmin = false;
 
-    function showadmin()
-    {
+    function showadmin() {
         $(".nav-tabs li").removeClass("active");
         $(".tab-pane").removeClass("active");
         loadDashboard();
     }
-    
-    function showInfo()
-    {
+
+    function showInfo() {
         hideAlert();
         document.title = title;
         $(".nav-tabs li").removeClass("active");
@@ -45,14 +43,12 @@
         $("#divInfo").show();
     }
 
-    function loadDashboard() 
-    {
+    function loadDashboard() {
         showDashboard();
         refreshDashboard();
     }
-    
-    function showDashboard()
-    {
+
+    function showDashboard() {
         hideAlert();
         document.title = title;
         $(".nav-tabs li").removeClass("active");
@@ -64,14 +60,13 @@
         $("#divDashboard").show();
     }
 
-    $(function() 
-    {
+    $(function () {
         var headerHtml = $("#header").html();
         $("#header").html(`<div class="title">
-        <a href="/">
-              <img src="/images/logo.svg" style="width: 30px" alt="EonaCat Logo" />
-        </a>${headerHtml}
-      </div>`);
+            <a href="/">
+                  <img src="/images/logo.svg" style="width: 30px" alt="EonaCat Logo" />
+            </a>${headerHtml}
+          </div>`);
 
         $("[name=radioStatsType]").each(function (i) {
             $(this).change(function () {
@@ -80,8 +75,7 @@
         });
 
         isadmin = token !== '';
-        if (isadmin) 
-        {
+        if (isadmin) {
             $(document).on('click', '.editDomain', function () {
                 var id = $(this).data('id');
                 var route = '@Url.Action("GetById", "Domain")?id=' + id;
@@ -89,7 +83,7 @@
             });
 
             showadmin();
-            
+
             // Periodically update the chart using the specified interval
             setInterval(function () {
                 if (!refreshInProgress) {
@@ -101,19 +95,16 @@
         }
     });
 
-    function checkLogin()
-    {
+    function checkLogin() {
         username = $("#username").val();
         password = $("#password").val();
 
-        if (username === null || username === "")
-        {
+        if (username === null || username === "") {
             shakeModal("modalLogin", "Please enter your username", "alert-warning")
             return false;
         }
 
-        if (password === null || password === "")
-        {
+        if (password === null || password === "") {
             shakeModal("modalLogin", "Please enter your password", "alert-warning")
             return false;
         }
@@ -155,9 +146,8 @@
     const divDashboard = $("#divDashboard");
     var refreshInProgress = false;
 
-    async function refreshDashboard(hideLoader = null) 
-    {
-          if (refreshInProgress) {
+    async function refreshDashboard(hideLoader = null) {
+        if (refreshInProgress) {
             // A refresh is already in progress, so skip this call
             return;
         }
@@ -166,8 +156,7 @@
             divDashboard.hide();
             divDashboardSpinner.show();
         }
-        else
-        {
+        else {
             divDashboardSpinner.hide();
         }
 
@@ -183,8 +172,7 @@
             success: function (responseJSON) {
                 const result = responseJSON.response;
                 const stats = result.stats;
-                if (stats == null)
-                {
+                if (stats == null) {
                     return;
                 }
                 const keys = Object.keys(stats);
@@ -236,66 +224,62 @@
     }
 
     function UpdateCharts(result) {
-        // stats chart
-        if (window.chartDashboardMain == null) 
-        {
-            var canvasStats = document.getElementById("stats").getContext("2d");
+        // Stats chart
+        if (!window.chartDashboardMain) {
+            const canvasStats = document.getElementById("stats").getContext("2d");
             window.chartDashboardMain = new Chart(canvasStats, {
                 type: "line",
                 data: result.statisticsData,
                 options: {
-                    //responsive: false,
-                    //maintainAspectRatio: false,
                     elements: {
                         line: {
-                            tension: 0.1
+                            tension: 0.2
                         }
-                    },
+                    }
                 }
             });
         } else {
             window.chartDashboardMain.data = result.statisticsData;
             window.chartDashboardMain.update();
         }
-        
-        if (!isadmin || result.queryTypeChartData.labels.length == 0) {
-            $('.topList').hide();
-        }
-        else
-        {
-            $('.topList').show();
 
-            // query type chart
-            if (window.chartqueryDonut == null) {
-                var contextqueryDonut = document.getElementById("queryDonut").getContext("2d");
-                window.chartqueryDonut = new Chart(contextqueryDonut, 
-                {
+        // Hide or show topList based on conditions
+        $('.topList').toggle(isadmin && result.queryTypeChartData.labels.length > 0);
+
+        // Query type chart
+        let chartqueryDonut = window.chartqueryDonut;
+        if (!chartqueryDonut) {
+            var queryDonut = document.getElementById("queryDonut");
+            if (queryDonut != null) 
+            {
+                const contextqueryDonut = queryDonut.getContext("2d");
+                chartqueryDonut = window.chartqueryDonut = new Chart(contextqueryDonut, {
                     type: "doughnut",
                     data: result.queryTypeChartData,
-                        options: 
-                        {
-                            cutoutPercentage: 80,
-                            aspectRatio: 1,
-                        }
+                    options: {
+                        cutoutPercentage: 80,
+                        aspectRatio: 1
+                    }
                 });
-            } else {
-                window.chartqueryDonut.data = result.queryTypeChartData;
-                window.chartqueryDonut.update();
             }
+        } else {
+            chartqueryDonut.data = result.queryTypeChartData;
+            chartqueryDonut.update();
         }
-        
-        setTimeout(function () { createTable("topBlocked", result.topBlocked) }, 100);
-        setTimeout(function () { createTable("topClients", result.topClients) }, 100);
-        setTimeout(function () { createTable("topDomains", result.topDomains) }, 100);
-        setTimeout(function () { createTable("lastQueries", result.lastQueries) }, 100);
+
+        // Call createTable with a delay for each table
+        setTimeout(() => createTable("topBlocked", result.topBlocked), 100);
+        setTimeout(() => createTable("topClients", result.topClients), 100);
+        setTimeout(() => createTable("topDomains", result.topDomains), 100);
+        setTimeout(() => createTable("lastQueries", result.lastQueries), 100);
     }
-    
-    function allowedButton(id)
-    {
-        var button = '<a href="#" title="Add to the allowList" onclick = "return allowDomain(' + id +');"> Allow</a>';
+
+
+    function allowedButton(id) {
+        var button = '<a href="#" title="Add to the allowList" onclick = "return allowDomain(' + id + ');"> Allow</a>';
         return button;
     }
-    
+
     function allowDomain(id) {
         HTTPRequest({
             url: "/api/allowDomain?token=" + token + "&id=" + id,
@@ -338,13 +322,13 @@
         var button = '<a href="#" title="Add to the default List" onclick = "return defaultDomain(' + id + ');"> Default</a>';
         return button;
     }
-    
+
     function defaultDomain(id) {
         HTTPRequest({
             url: "/api/defaultDomain?token=" + token + "&id=" + id,
             async: true,
             success: function (responseJSON) {
-                location.reload(); 
+                location.reload();
             },
 
             invalidToken: function () {
@@ -355,7 +339,7 @@
 
         return false;
     }
-    
+
     function allowClient(name) {
         HTTPRequest({
             url: "/api/allowClient?token=" + token + "&name=" + name,
@@ -372,7 +356,7 @@
 
         return false;
     }
-    
+
     function blockClient(name) {
         HTTPRequest({
             url: "/api/blockClient?token=" + token + "&name=" + name,
@@ -410,21 +394,17 @@
 
     function createTable(tableId, data) {
         const $table = $("#" + tableId);
-        let tableHtml = "";
+        let tableHtml = "<thead><tr><th>Name</th><th>&nbsp;</th></tr></thead><tbody>";
 
         if (!data || data.length === 0) {
-            tableHtml = "<thead><tr>&nbsp;</tr></thead><tbody>";
-            tableHtml += "<tr><td>No Data</td><td></td></tr>";
+            tableHtml += "<tr><td colspan='2'>No Data</td></tr>";
         } else {
             const isTopDomains = tableId === "topDomains" || tableId === "topBlocked" || tableId === "lastQueries";
             const isTopClients = tableId === "topClients";
 
-            tableHtml = "<thead><tr><th>Name</th><th>&nbsp;</th></tr></thead><tbody>";
-
-            for (let i = 0; i < data.length; i++) {
-                const { id, name, isBlocked, alias } = data[i];
+            for (const item of data) {
+                const { id, name, isBlocked, alias } = item;
                 const blockedClass = isBlocked ? "denied" : "allowed";
-
                 let nameHtml = name;
                 let buttonHtml = "";
 
@@ -438,9 +418,9 @@
                 }
 
                 tableHtml += `<tr class='${blockedClass}'${isTopClients ? ` title='${alias}'` : ""}>
-                    <td>${nameHtml}</td>
-                    <td${isTopDomains ? " style='width:30%'" : ""}>${buttonHtml}</td>
-                </tr>`;
+                        <td>${nameHtml}</td>
+                        <td${isTopDomains ? " style='width:30%'" : ""}>${buttonHtml}</td>
+                    </tr>`;
             }
         }
 
@@ -473,11 +453,10 @@
         return false;
     }
 
-    function logout()
-    {
+    function logout() {
         HTTPRequest({
             url: "/index/logout",
-        });        
+        });
     }
 
     function viewLog(logFile) {

@@ -15,18 +15,17 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core
+namespace EonaCat.Dns.Core;
+
+public enum KeyExchangeMode : ushort
 {
-    public enum KeyExchangeMode : ushort
-    {
-        ServerAssignment = 1,
+    ServerAssignment = 1,
 
-        DiffieHellman = 2,
+    DiffieHellman = 2,
 
-        GssApi = 3,
+    GssApi = 3,
 
-        ResolverAssignment = 4,
+    ResolverAssignment = 4,
 
-        KeyDeletion = 5,
-    }
+    KeyDeletion = 5
 }

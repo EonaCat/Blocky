@@ -16,16 +16,16 @@ limitations under the License
 
 */
 
-using EonaCat.Helpers.Helpers;
-using EonaCat.Json;
-using Microsoft.AspNetCore.Http;
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using EonaCat.Dns.Managers.Stats;
+using EonaCat.Helpers.Helpers;
+using EonaCat.Json;
+using Microsoft.AspNetCore.Http;
 using WebException = EonaCat.Dns.Exceptions.WebException;
 
 namespace EonaCat.Dns.Managers;
@@ -58,7 +58,8 @@ internal class Managers
 
             IsRetrievingStats = true;
 
-            var data = await ApiStatsManager.GetStatsAsync(type, jsonWriter, isAuthenticated, forceNew).ConfigureAwait(false);
+            var data = await ApiStatsManager.GetStatsAsync(type, jsonWriter, isAuthenticated, forceNew)
+                .ConfigureAwait(false);
 
             IsRetrievingStats = false;
 
@@ -78,7 +79,7 @@ internal class Managers
         }
         catch (Exception exception)
         {
-            Logger.Log(exception);
+            await Logger.LogAsync(exception);
         }
     }
 
@@ -88,14 +89,14 @@ internal class Managers
         return SessionManager.IsSessionValid(token);
     }
 
-    internal void WriteToLog(Exception exception, bool writeToConsole = true)
+    internal async Task WriteToLog(Exception exception, bool writeToConsole = true)
     {
-        Logger.Log(exception, string.Empty, writeToConsole);
+        await Logger.LogAsync(exception, string.Empty, writeToConsole);
     }
 
-    internal void WriteToLog(string message, bool writeToConsole = true)
+    internal async Task WriteToLog(string message, bool writeToConsole = true)
     {
-        Logger.Log(message, writeToConsole: writeToConsole);
+        await Logger.LogAsync(message, writeToConsole: writeToConsole);
     }
 
     internal void ApiListLogs(JsonTextWriter jsonWriter)
@@ -124,7 +125,7 @@ internal class Managers
         jsonWriter.WriteEndArray();
     }
 
-    internal static void ApiDeleteLog(string log)
+    internal static async Task ApiDeleteLog(string log)
     {
         if (string.IsNullOrEmpty(log))
         {
@@ -147,10 +148,10 @@ internal class Managers
             File.Delete(logFile);
         }
 
-        Logger.Log("Log file was deleted: " + log);
+        await Logger.LogAsync("Log file was deleted: " + log);
     }
 
-    internal void ApiLogs(HttpResponse response, string logFileName)
+    internal async Task ApiLogs(HttpResponse response, string logFileName)
     {
         try
         {
@@ -162,11 +163,11 @@ internal class Managers
             }
 
             var logFile = Path.Combine(Logger.LogFolder, logFileName);
-            Logger.DownloadLogAsync(response.HttpContext, logFile).ConfigureAwait(false);
+            await Logger.DownloadLogAsync(response.HttpContext, logFile).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
-            Logger.Log(exception);
+            await Logger.LogAsync(exception);
         }
     }
 
@@ -174,11 +175,15 @@ internal class Managers
     {
         // Check if the logFile contains more than one dot
         if (logFile.Count(c => c == '.') > 1)
+        {
             return false;
+        }
 
         // Check if the logFile contains directory separators
         if (logFile.Contains("/") || logFile.Contains("\\"))
+        {
             return false;
+        }
 
         // Whitelisted file extensions
         var whitelistPatterns = new[]

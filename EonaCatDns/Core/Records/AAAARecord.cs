@@ -15,13 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class AaaaRecord : AddressRecordBase
 {
-    public class AaaaRecord : AddressRecordBase
+    public AaaaRecord()
     {
-        public AaaaRecord()
-        {
-            Type = RecordType.Aaaa;
-        }
+        Type = RecordType.Aaaa;
     }
 }

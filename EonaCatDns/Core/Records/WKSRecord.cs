@@ -18,37 +18,33 @@ limitations under the License
 using System.Collections.Generic;
 using System.Net;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class WksRecord : ResourceRecord
 {
-    public class WksRecord : ResourceRecord
+    public WksRecord()
     {
-        public WksRecord()
-        {
-            Type = RecordType.Wks;
-        }
+        Type = RecordType.Wks;
+    }
 
-        public string Hostname { get; set; }
-        public IPAddress IpAddress { get; set; }
-        public byte ProtocolNumber { get; set; }
-        public List<ushort> ServicePortNumbers { get; set; }
+    public string Hostname { get; set; }
+    public IPAddress IpAddress { get; set; }
+    public byte ProtocolNumber { get; set; }
+    public List<ushort> ServicePortNumbers { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Hostname = reader.ReadString();
-            IpAddress = reader.ReadIpAddress();
-            ProtocolNumber = reader.ReadByte();
-            ServicePortNumbers = new List<ushort>(reader.ReadUInt16());
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Hostname = reader.ReadString();
+        IpAddress = reader.ReadIpAddress();
+        ProtocolNumber = reader.ReadByte();
+        ServicePortNumbers = new List<ushort>(reader.ReadUInt16());
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteString(Hostname);
-            writer.WriteIpAddress(IpAddress);
-            writer.WriteByte(ProtocolNumber);
-            foreach (var servicePortNumber in ServicePortNumbers)
-            {
-                writer.WriteUInt16(servicePortNumber);
-            }
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteString(Hostname);
+        writer.WriteIpAddress(IpAddress);
+        writer.WriteByte(ProtocolNumber);
+        foreach (var servicePortNumber in ServicePortNumbers) writer.WriteUInt16(servicePortNumber);
     }
 }

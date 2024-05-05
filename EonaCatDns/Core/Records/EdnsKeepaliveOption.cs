@@ -18,45 +18,44 @@ limitations under the License
 using System;
 using System.IO;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class EdnsKeepaliveOption : EdnsOptionBase
 {
-    public class EdnsKeepaliveOption : EdnsOptionBase
+    public EdnsKeepaliveOption()
     {
-        public EdnsKeepaliveOption()
+        Type = EdnsOptionType.Keepalive;
+    }
+
+    public TimeSpan? Timeout { get; set; }
+
+    public override void ReadData(DnsReader reader, int length)
+    {
+        switch (length)
         {
-            Type = EdnsOptionType.Keepalive;
+            case 0:
+                Timeout = null;
+                break;
+
+            case 2:
+                Timeout = TimeSpan.FromMilliseconds(reader.ReadUInt16() * 100);
+                break;
+
+            default:
+                throw new InvalidDataException("EonaCatDns: " + $"Invalid EdnsKeepAlive length of '{length}'.");
         }
+    }
 
-        public TimeSpan? Timeout { get; set; }
-
-        public override void ReadData(DnsReader reader, int length)
+    public override void WriteData(DnsWriter writer)
+    {
+        if (Timeout.HasValue)
         {
-            switch (length)
-            {
-                case 0:
-                    Timeout = null;
-                    break;
-
-                case 2:
-                    Timeout = TimeSpan.FromMilliseconds(reader.ReadUInt16() * 100);
-                    break;
-
-                default:
-                    throw new InvalidDataException("EonaCatDns: " + $"Invalid EdnsKeepAlive length of '{length}'.");
-            }
+            writer.WriteUInt16((ushort)(Timeout.Value.TotalMilliseconds / 100));
         }
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            if (Timeout.HasValue)
-            {
-                writer.WriteUInt16((ushort)(Timeout.Value.TotalMilliseconds / 100));
-            }
-        }
-
-        public override string ToString()
-        {
-            return $";   Keepalive = {Timeout}";
-        }
+    public override string ToString()
+    {
+        return $";   Keepalive = {Timeout}";
     }
 }

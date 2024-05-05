@@ -1,23 +1,23 @@
-﻿    <!--
-    EonaCatDns
-    Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+﻿<!--
+EonaCatDns
+Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License
 -->
 @using EonaCat.Dns.Managers
 @model IndexViewModel;
 
-    <style>
+<style>
 
         .statsMenu .total-queries {
             background-color: @StatsManagerApi.TotalQueriesBackgroundColor;
@@ -74,94 +74,90 @@
             </li>
         </ul>
 
-        <div id="divInfo" style="display: none;">
+        <div id="divInfo" style="display: none; margin-left:20%">
             <div class="row">
-                <div class="col-md-4">
-                    <div class="latestQueries panel panel-default col-2" style="height: 400px; overflow: auto">
+                <div class="col-md-3">
+                    <div class="latestQueries panel panel-default col-2" style="height: 415px; overflow: auto">
                         <div class="panel-heading">Latest Queries</div>
                         <table class="table table-hover" id="lastQueries">
                             <thead>
-                                <tr>
-                                    <th>Domain</th>
-                                    <th>&nbsp;</th>
-                                </tr>
+                            <tr>
+                                <th>Domain</th>
+                                <th>&nbsp;</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>EonaCat.com</td>
-                                    <td>100</td>
-                                </tr>
+                            <tr>
+                                <td>EonaCat.com</td>
+                                <td>100</td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="topClients panel panel-default col-2" style="height: 400px; overflow: auto">
-                        <div class="panel-heading">Top Clients</div>
-                        <table class="table table-hover" id="topClients">
-                            <thead>
-                                <tr>
-                                    <th>Client</th>
-                                    <th>Queries</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>127.0.0.1</td>
-                                    <td>100</td>
-                                </tr>
-                                <tr>
-                                    <td>::1</td>
-                                    <td>100</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="topQuery panel panel-default" style="height: 400px; overflow: auto">
-                        <div class="panel-heading">Top Query Types</div>
-                        <div class="panel-body" style="margin-left: 10%;">
-                            <canvas id="queryDonut" style="height: 320px; width: 320px;"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="topBlockedDomains panel panel-default col-2" style="height: 400px; overflow: auto">
-                        <div class="panel-heading">Top Blocked Domains</div>
-                        <table class="table table-hover" id="topBlocked">
-                            <thead>
-                                <tr>
-                                    <th>Domain</th>
-                                    <th>&nbsp;</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Blocked.EonaCat.com</td>
-                                    <td>&nbsp;</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="topDomains panel panel-default col-2" style="height: 400px; overflow: auto">
+                    <div class="topDomains panel panel-default" style="height: 415px; overflow: auto">
                         <div class="panel-heading">Top Domains</div>
                         <table class="table table-hover" id="topDomains">
                             <thead>
-                                <tr>
-                                    <th>Domain</th>
-                                    <th>&nbsp;</th>
-                                </tr>
+                            <tr>
+                                <th>Domain</th>
+                                <th>&nbsp;</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>EonaCat.com</td>
-                                    <td>100</td>
-                                </tr>
+                            <tr>
+                                <td>EonaCat.com</td>
+                                <td>100</td>
+                            </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="topClients panel panel-default col-2" style="height: 415px; overflow: auto">
+                        <div class="panel-heading">Top Clients</div>
+                        <table class="table table-hover" id="topClients">
+                            <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Queries</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>127.0.0.1</td>
+                                <td>100</td>
+                            </tr>
+                            <tr>
+                                <td>::1</td>
+                                <td>100</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="topBlockedDomains panel panel-default" style="height: 415px; overflow: auto">
+                        <div class="panel-heading">Top Blocked Domains</div>
+                        <table class="table table-hover" id="topBlocked">
+                            <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>&nbsp;</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>Blocked.EonaCat.com</td>
+                                <td>&nbsp;</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="topQuery panel panel-default" style="height: 850px; overflow: auto">
+                        <div class="panel-heading">Top Query Types</div>
+                        <div class="panel-body" style="margin-left: 10%;">
+                            <canvas id="queryDonut" style="height: 640px; width: 320px; max-height:690px;"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -250,8 +246,8 @@
                     </div>
                 </div>
             </div>
-            
-            
+
+
             <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
                 <div class="card refused">
                     <div class="card-body">
@@ -263,7 +259,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
                 <div class="card blocked">
                     <div class="card-body">
@@ -275,7 +271,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-sm-6 col-md-4 col-lg-3 stats-item mb-4">
                 <div class="card clients">
                     <div class="card-body">
@@ -289,5 +285,5 @@
             </div>
         </div>
     </div>
-    <canvas id="stats" style="height:200px"></canvas>
+    <canvas id="stats" style="max-height:690px !important"></canvas>
 </div>

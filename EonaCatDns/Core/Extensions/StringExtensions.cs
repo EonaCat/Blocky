@@ -14,19 +14,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
 */
+
 using System;
 
-namespace EonaCat.Dns.Core.Extensions
+namespace EonaCat.Dns.Core.Extensions;
+
+public static class StringExtensions
 {
-    public static class StringExtensions
+    public static string RemoveEnd(this string str, string suffix)
     {
-        public static string RemoveEnd(this string str, string suffix)
+        if (str.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
         {
-            if (str.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-            {
-                return str.Substring(0, str.Length - suffix.Length);
-            }
-            return str;
+            return str.Substring(0, str.Length - suffix.Length);
         }
+
+        return str;
     }
 }

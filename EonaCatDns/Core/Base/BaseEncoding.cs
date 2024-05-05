@@ -18,120 +18,126 @@ limitations under the License
 using System;
 using System.Text;
 
-namespace EonaCat.Dns.Core.Base
+namespace EonaCat.Dns.Core.Base;
+
+public sealed class BaseEncoding : Encoding
 {
-    public sealed class BaseEncoding : Encoding
+    public static readonly BaseEncoding Base16UpperCase = new(BaseAlphabet.Base16UpperCaseAlphabet, "base16-upper");
+
+    public static readonly BaseEncoding Base16LowerCase = new(BaseAlphabet.Base16LowerCaseAlphabet, "base16-lower");
+
+    public static readonly BaseEncoding Base32 = new(BaseAlphabet.Base32Alphabet, "base32");
+    private readonly BaseDecoder _baseDecoder;
+
+    private readonly BaseEncoder _encoder;
+
+    public BaseEncoding(BaseAlphabet baseNAlphabet, string encodingName)
     {
-        public static readonly BaseEncoding Base16UpperCase = new(BaseAlphabet.Base16UpperCaseAlphabet, "base16-upper");
+        EncodingName = encodingName ?? throw new ArgumentNullException("EonaCatDns: " + nameof(encodingName));
+        Alphabet = baseNAlphabet ?? throw new ArgumentNullException("EonaCatDns: " + nameof(baseNAlphabet));
 
-        public static readonly BaseEncoding Base16LowerCase = new(BaseAlphabet.Base16LowerCaseAlphabet, "base16-lower");
+        _encoder = new BaseEncoder(baseNAlphabet);
+        _baseDecoder = new BaseDecoder(baseNAlphabet);
+    }
 
-        public static readonly BaseEncoding Base32 = new(BaseAlphabet.Base32Alphabet, "base32");
+    public BaseAlphabet Alphabet { get; }
 
-        private readonly BaseEncoder _encoder;
-        private readonly BaseDecoder _baseDecoder;
+    public override string EncodingName { get; }
 
-        public BaseAlphabet Alphabet { get; }
+    public override bool IsSingleByte => Alphabet.EncodingBlockSize == 1;
 
-        public override string EncodingName { get; }
+    public override int GetByteCount(char[] chars, int index, int count)
+    {
+        return _encoder.GetByteCount(chars, index, count, true);
+    }
 
-        public override bool IsSingleByte => Alphabet.EncodingBlockSize == 1;
+    public override int GetByteCount(string s)
+    {
+        return _encoder.GetByteCount(s, 0, s.Length, true);
+    }
 
-        public BaseEncoding(BaseAlphabet baseNAlphabet, string encodingName)
+    public override unsafe int GetByteCount(char* chars, int count)
+    {
+        return _encoder.GetByteCount(chars, count, true);
+    }
+
+    public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
+    {
+        return _encoder.GetBytes(chars, charIndex, charCount, bytes, byteIndex, true);
+    }
+
+    public override int GetBytes(string s, int charIndex, int charCount, byte[] bytes, int byteIndex)
+    {
+        _encoder.Convert(s, charIndex, charCount, bytes, byteIndex, bytes.Length - byteIndex, true, out _,
+            out var bytesUsed, out _);
+        return bytesUsed;
+    }
+
+    public override unsafe int GetBytes(char* chars, int charCount, byte* bytes, int byteCount)
+    {
+        return _encoder.GetBytes(chars, charCount, bytes, byteCount, true);
+    }
+
+    public override int GetCharCount(byte[] bytes, int index, int count)
+    {
+        return _baseDecoder.GetCharCount(bytes, index, count);
+    }
+
+    public override unsafe int GetCharCount(byte* bytes, int count)
+    {
+        return _baseDecoder.GetCharCount(bytes, count, true);
+    }
+
+    public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
+    {
+        return _baseDecoder.GetChars(bytes, byteIndex, byteCount, chars, charIndex, true);
+    }
+
+    public override unsafe int GetChars(byte* bytes, int byteCount, char* chars, int charCount)
+    {
+        return _baseDecoder.GetChars(bytes, byteCount, chars, charCount, true);
+    }
+
+    public override unsafe string GetString(byte[] bytes, int index, int count)
+    {
+        var charCount = _baseDecoder.GetCharCount(bytes, index, count);
+        if (charCount == 0)
         {
-            EncodingName = encodingName ?? throw new ArgumentNullException("EonaCatDns: " + nameof(encodingName));
-            Alphabet = baseNAlphabet ?? throw new ArgumentNullException("EonaCatDns: " + nameof(baseNAlphabet));
-
-            _encoder = new BaseEncoder(baseNAlphabet);
-            _baseDecoder = new BaseDecoder(baseNAlphabet);
+            return string.Empty;
         }
 
-        public override int GetByteCount(char[] chars, int index, int count)
+        var output = new string('\0', charCount);
+        fixed (char* outputPtr = output)
         {
-            return _encoder.GetByteCount(chars, index, count, flush: true);
+            _baseDecoder.Convert(new ReadOnlySpan<byte>(bytes, index, count), new Span<char>(outputPtr, output.Length),
+                true, out _, out _, out _);
         }
 
-        public override int GetByteCount(string s)
-        {
-            return _encoder.GetByteCount(s, 0, s.Length, flush: true);
-        }
+        return output;
+    }
 
-        public override unsafe int GetByteCount(char* chars, int count)
-        {
-            return _encoder.GetByteCount(chars, count, flush: true);
-        }
+    public override int GetMaxByteCount(int charCount)
+    {
+        return _encoder.GetMaxByteCount(charCount);
+    }
 
-        public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
-        {
-            return _encoder.GetBytes(chars, charIndex, charCount, bytes, byteIndex, flush: true);
-        }
+    public override int GetMaxCharCount(int byteCount)
+    {
+        return _baseDecoder.GetMaxCharCount(byteCount);
+    }
 
-        public override int GetBytes(string s, int charIndex, int charCount, byte[] bytes, int byteIndex)
-        {
-            _encoder.Convert(s, charIndex, charCount, bytes, byteIndex, bytes.Length - byteIndex, flush: true, out _, out var bytesUsed, out _);
-            return bytesUsed;
-        }
+    public override Decoder GetDecoder()
+    {
+        return _baseDecoder;
+    }
 
-        public override unsafe int GetBytes(char* chars, int charCount, byte* bytes, int byteCount)
-        {
-            return _encoder.GetBytes(chars, charCount, bytes, byteCount, flush: true);
-        }
+    public override Encoder GetEncoder()
+    {
+        return _encoder;
+    }
 
-        public override int GetCharCount(byte[] bytes, int index, int count)
-        {
-            return _baseDecoder.GetCharCount(bytes, index, count);
-        }
-
-        public override unsafe int GetCharCount(byte* bytes, int count)
-        {
-            return _baseDecoder.GetCharCount(bytes, count, flush: true);
-        }
-
-        public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
-        {
-            return _baseDecoder.GetChars(bytes, byteIndex, byteCount, chars, charIndex, flush: true);
-        }
-
-        public override unsafe int GetChars(byte* bytes, int byteCount, char* chars, int charCount)
-        {
-            return _baseDecoder.GetChars(bytes, byteCount, chars, charCount, flush: true);
-        }
-
-        public override unsafe string GetString(byte[] bytes, int index, int count)
-        {
-            var charCount = _baseDecoder.GetCharCount(bytes, index, count);
-            if (charCount == 0)
-            {
-                return string.Empty;
-            }
-            var output = new string('\0', charCount);
-            fixed (char* outputPtr = output)
-            {
-                _baseDecoder.Convert(new ReadOnlySpan<byte>(bytes, index, count), new Span<char>(outputPtr, output.Length), flush: true, out _, out _, out _);
-            }
-            return output;
-        }
-
-        public override int GetMaxByteCount(int charCount)
-        {
-            return _encoder.GetMaxByteCount(charCount);
-        }
-
-        public override int GetMaxCharCount(int byteCount)
-        {
-            return _baseDecoder.GetMaxCharCount(byteCount);
-        }
-
-        public override Decoder GetDecoder()
-        {
-            return _baseDecoder;
-        }
-
-        public override Encoder GetEncoder()
-        {
-            return _encoder;
-        }
-
-        public override string ToString() => EncodingName;
+    public override string ToString()
+    {
+        return EncodingName;
     }
 }

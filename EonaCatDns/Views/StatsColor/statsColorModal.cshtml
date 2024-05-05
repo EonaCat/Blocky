@@ -35,17 +35,17 @@ $(function ()
 {
     <div class="form-group">
         <label for="Name">Name</label>
-        @Html.TextBoxFor(x => x.Name, new { @class = "form-control" , disabled = "disabled" })
+        @Html.TextBoxFor(x => x.Name, new { @class = "form-control", disabled = "disabled" })
         @Html.Hidden("Name")
     </div>
 
     <div class="form-group">
         <label for="Value">Value</label>
-        @Html.TextBoxFor(x => x.Value, new { id = "Value", @class = "form-control",placeholder = "Value" })
+        @Html.TextBoxFor(x => x.Value, new { id = "Value", @class = "form-control", placeholder = "Value" })
     </div>
     <button type="submit" class="btn btn-primary">Save changes</button>
 }
-<br />
+<br/>
 <button id="picker"></button>
 
 <script>

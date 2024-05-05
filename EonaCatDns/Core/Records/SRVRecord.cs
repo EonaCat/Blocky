@@ -15,53 +15,52 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class SrvRecord : ResourceRecord
 {
-    public class SrvRecord : ResourceRecord
+    public SrvRecord()
     {
-        public SrvRecord()
-        {
-            Type = RecordType.Srv;
-        }
+        Type = RecordType.Srv;
+    }
 
-        public ushort Priority { get; set; }
+    public ushort Priority { get; set; }
 
-        public ushort Weight { get; set; }
+    public ushort Weight { get; set; }
 
-        public ushort Port { get; set; }
+    public ushort Port { get; set; }
 
-        public DomainName Target { get; set; }
+    public DomainName Target { get; set; }
 
-        public override void ReadData(DnsReader reader, int length)
-        {
-            Priority = reader.ReadUInt16();
-            Weight = reader.ReadUInt16();
-            Port = reader.ReadUInt16();
-            Target = reader.ReadDomainName();
-        }
+    public override void ReadData(DnsReader reader, int length)
+    {
+        Priority = reader.ReadUInt16();
+        Weight = reader.ReadUInt16();
+        Port = reader.ReadUInt16();
+        Target = reader.ReadDomainName();
+    }
 
-        public override void ReadData(MasterReader reader)
-        {
-            Priority = reader.ReadUInt16();
-            Weight = reader.ReadUInt16();
-            Port = reader.ReadUInt16();
-            Target = reader.ReadDomainName();
-        }
+    public override void ReadData(MasterReader reader)
+    {
+        Priority = reader.ReadUInt16();
+        Weight = reader.ReadUInt16();
+        Port = reader.ReadUInt16();
+        Target = reader.ReadDomainName();
+    }
 
-        public override void WriteData(DnsWriter writer)
-        {
-            writer.WriteUInt16(Priority);
-            writer.WriteUInt16(Weight);
-            writer.WriteUInt16(Port);
-            writer.WriteDomainName(Target);
-        }
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteUInt16(Priority);
+        writer.WriteUInt16(Weight);
+        writer.WriteUInt16(Port);
+        writer.WriteDomainName(Target);
+    }
 
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteUInt16(Priority);
-            writer.WriteUInt16(Weight);
-            writer.WriteUInt16(Port);
-            writer.WriteDomainName(Target, appendSpace: false);
-        }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteUInt16(Priority);
+        writer.WriteUInt16(Weight);
+        writer.WriteUInt16(Port);
+        writer.WriteDomainName(Target, false);
     }
 }

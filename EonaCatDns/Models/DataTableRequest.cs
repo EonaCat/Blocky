@@ -22,21 +22,15 @@ namespace EonaCat.Dns.Models;
 
 public class DataTableRequest
 {
-    [FromQuery(Name = "sEcho")]
-    public string Echo { get; set; }
+    [FromQuery(Name = "sEcho")] public string Echo { get; set; }
 
-    [FromQuery(Name = "iDisplayStart")]
-    public int Start { get; set; }
+    [FromQuery(Name = "iDisplayStart")] public int Start { get; set; }
 
-    [FromQuery(Name = "iDisplayLength")]
-    public int End { get; set; }
+    [FromQuery(Name = "iDisplayLength")] public int End { get; set; }
 
-    [FromQuery(Name = "sSearch")]
-    public string Search { get; set; }
+    [FromQuery(Name = "sSearch")] public string Search { get; set; }
 
-    [FromQuery(Name = "iSortCol_0")]
-    public int SortColumn { get; set; }
+    [FromQuery(Name = "iSortCol_0")] public int SortColumn { get; set; }
 
-    [FromQuery(Name = "sSortDir_0")]
-    public string SortDirection { get; set; }
+    [FromQuery(Name = "sSortDir_0")] public string SortDirection { get; set; }
 }

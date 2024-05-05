@@ -115,5 +115,4 @@ public class DnsHeader
         public int OpCodeByte => 11;
         public int MessageTypeByte => 15;
     }
-
 }

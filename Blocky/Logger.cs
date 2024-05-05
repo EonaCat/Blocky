@@ -14,57 +14,52 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
 */
+
 using System;
 using System.Threading.Tasks;
 using EonaCat.Logger;
 using EonaCat.Logger.Managers;
 
-namespace EonaCat.Blocky
+namespace EonaCat.Blocky;
+// Blocky
+// Blocking domains the way you want it.
+// Copyright EonaCat (Jeroen Saey) 2017-2023
+// https://blocky.EonaCat.com
+
+public static class Logger
 {
-    // Blocky
-    // Blocking domains the way you want it.
-    // Copyright EonaCat (Jeroen Saey) 2017-2023
-    // https://blocky.EonaCat.com
+    private static LogManager LogManager;
+    public static bool UseLocalTime { get; set; }
+    public static ELogType MaxLogType { get; set; } = ELogType.TRACE;
+    public static string LogFolder => Config.LogFolder;
+    public static string CurrentLogFile => LogManager?.CurrentLogFile;
 
-    public static class Logger
+    public static async Task LogAsync(string message, ELogType logType = ELogType.INFO, bool writeToConsole = true)
     {
-        public static bool UseLocalTime { get; set; }
-        public static ELogType MaxLogType { get; set; } = ELogType.TRACE;
-        public static string LogFolder => Config.LogFolder;
-        public static string CurrentLogFile => LogManager?.CurrentLogFile;
-        private static LogManager LogManager;
+        await Task.Run(async () => { await LogManager.WriteAsync(message, logType, writeToConsole); })
+            .ConfigureAwait(false);
+    }
 
-        public static void Log(string message, ELogType logType = ELogType.INFO, bool writeToConsole = true)
-        {
-            Task.Run(() =>
-            {
-                LogManager.Write(message, logType, writeToConsole);
-            }).ConfigureAwait(false);
-        }
+    public static async Task LogAsync(Exception exception, string message = "", bool writeToConsole = true)
+    {
+        await Task.Run(async () => { await LogManager.WriteAsync(exception, message, writeToConsole: writeToConsole); })
+            .ConfigureAwait(false);
+    }
 
-        public static void Log(Exception exception, string message = "", bool writeToConsole = true)
+    public static void Configure()
+    {
+        var loggerSettings = new LoggerSettings
         {
-            Task.Run(() =>
+            Id = "BlockyLogger",
+            MaxLogType = MaxLogType,
+            UseLocalTime = UseLocalTime,
+            FileLoggerOptions =
             {
-                LogManager.Write(exception, module: message, writeToConsole: writeToConsole);
-            }).ConfigureAwait(false);
-        }
-
-        public static void Configure()
-        {
-            var loggerSettings = new LoggerSettings
-            {
-                Id = "BlockyLogger",
-                MaxLogType = MaxLogType,
-                UseLocalTime = UseLocalTime,
-                FileLoggerOptions =
-                {
-                    LogDirectory = LogFolder,
-                    FileSizeLimit = 20 * 1024 * 1024,
-                    UseLocalTime = UseLocalTime,
-                }
-            };
-            LogManager = new LogManager(loggerSettings);
-        }
+                LogDirectory = LogFolder,
+                FileSizeLimit = 20 * 1024 * 1024,
+                UseLocalTime = UseLocalTime
+            }
+        };
+        LogManager = new LogManager(loggerSettings);
     }
 }

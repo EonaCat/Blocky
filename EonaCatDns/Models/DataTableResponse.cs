@@ -24,6 +24,7 @@ public static class DataTableResponse
 {
     public static string ToJson(string echo, int totalRecords, object result)
     {
-        return $"{{\"sEcho\": {echo}, \"iTotalRecords\": {totalRecords}, \"iTotalDisplayRecords\": {totalRecords}, \"aaData\": {JsonHelper.ToJson(result)}}}";
+        return
+            $"{{\"sEcho\": {echo}, \"iTotalRecords\": {totalRecords}, \"iTotalDisplayRecords\": {totalRecords}, \"aaData\": {JsonHelper.ToJson(result)}}}";
     }
 }

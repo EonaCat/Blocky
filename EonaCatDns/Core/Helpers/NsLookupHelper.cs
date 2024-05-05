@@ -20,63 +20,64 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EonaCat.Dns.Core.Helpers
+namespace EonaCat.Dns.Core.Helpers;
+
+internal class NsLookupHelper
 {
-    internal class NsLookupHelper
+    internal static async Task ResolveAsync(string[] args, bool resolveOverDoh, bool appExitAfterCommand,
+        bool onlyExitAfterKeyPress)
     {
-        internal static async Task ResolveAsync(string[] args, bool resolveOverDoh, bool appExitAfterCommand, bool onlyExitAfterKeyPress)
+        if (args.Length > 0)
         {
-            if (args.Length > 0)
+            if (args[0].ToLower().StartsWith("--ns"))
             {
-                if (args[0].ToLower().StartsWith("--ns"))
+                try
                 {
-                    try
+                    var question = args[1];
+                    string recordType = null;
+
+                    if (args.Length > 2)
                     {
-                        var question = args[1];
-                        string recordType = null;
-
-                        if (args.Length > 2)
-                        {
-                            recordType = args[2];
-                        }
-
-                        var message = new Message();
-                        if (!Enum.TryParse(recordType, true, out RecordType currentRecordType))
-                        {
-                            currentRecordType = RecordType.Any;
-                        }
-
-                        var currentQuestion = new Question
-                        {
-                            Class = RecordClass.Internet,
-                            TimeCreated = DateTime.Now,
-                            Name = question,
-                            Type = currentRecordType
-                        };
-                        message.Questions.Add(currentQuestion);
-
-                        var response = await ResolveAsync(message, resolveOverDoh).ConfigureAwait(false);
-                        var stringBuilder = new StringBuilder();
-                        stringBuilder.AppendLine(response.ToString());
-                        Console.WriteLine(stringBuilder.ToString());
-                    }
-                    catch (Exception exception)
-                    {
-                        Console.WriteLine(exception.Message);
+                        recordType = args[2];
                     }
 
-                    ToolHelper.ExitAfterTool(appExitAfterCommand, onlyExitAfterKeyPress);
+                    var message = new Message();
+                    if (!Enum.TryParse(recordType, true, out RecordType currentRecordType))
+                    {
+                        currentRecordType = RecordType.Any;
+                    }
+
+                    var currentQuestion = new Question
+                    {
+                        Class = RecordClass.Internet,
+                        TimeCreated = DateTime.Now,
+                        Name = question,
+                        Type = currentRecordType
+                    };
+                    message.Questions.Add(currentQuestion);
+
+                    var response = await ResolveAsync(message, resolveOverDoh).ConfigureAwait(false);
+                    var stringBuilder = new StringBuilder();
+                    stringBuilder.AppendLine(response.ToString());
+                    Console.WriteLine(stringBuilder.ToString());
                 }
+                catch (Exception exception)
+                {
+                    Console.WriteLine(exception.Message);
+                }
+
+                ToolHelper.ExitAfterTool(appExitAfterCommand, onlyExitAfterKeyPress);
             }
+        }
+    }
+
+    private static async Task<Message> ResolveAsync(Message message, bool resolveOverDoh = false)
+    {
+        if (resolveOverDoh)
+        {
+            return await ResolveHelper.ResolveOverDohAsync(message, true).ConfigureAwait(false);
         }
 
-        private static async Task<Message> ResolveAsync(Message message, bool resolveOverDoh = false)
-        {
-            if (resolveOverDoh)
-            {
-                return await ResolveHelper.ResolveOverDohAsync(message, true).ConfigureAwait(false);
-            }
-            return await ResolveHelper.ResolveOverDnsAsync(message, true).ConfigureAwait(false);
-        }
+        return await ResolveHelper.ResolveOverDnsAsync(message, true).ConfigureAwait(false);
     }
 }

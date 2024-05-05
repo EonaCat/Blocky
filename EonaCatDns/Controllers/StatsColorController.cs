@@ -16,12 +16,12 @@ limitations under the License
 
 */
 
-using EonaCat.Dns.Database;
-using EonaCat.Dns.Models;
-using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
+using EonaCat.Dns.Database;
 using EonaCat.Dns.Managers;
+using EonaCat.Dns.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EonaCat.Dns.Controllers;
 
@@ -47,8 +47,26 @@ public class StatsColorController : ControllerBase
 
         if (!string.IsNullOrEmpty(search))
         {
-            query = query.Where(x => (x.Name != null && x.Name.ToLower().Contains(search)) ||
-                                     (x.Value != null && x.Value.ToLower().Contains(search)));
+            if (search.StartsWith("*") && search.EndsWith("*"))
+            {
+                query = query.Where(a => (a.Name != null && a.Name.ToLower().Contains(search)) ||
+                                         (a.Value != null && a.Value.ToLower().Contains(search)));
+            }
+            else if (search.StartsWith("*"))
+            {
+                query = query.Where(a => (a.Name != null && a.Name.ToLower().EndsWith(search)) ||
+                                         (a.Value != null && a.Value.ToLower().EndsWith(search)));
+            }
+            else if (search.EndsWith("*"))
+            {
+                query = query.Where(a => (a.Name != null && a.Name.ToLower().StartsWith(search)) ||
+                                         (a.Value != null && a.Value.ToLower().StartsWith(search)));
+            }
+            else
+            {
+                query = query.Where(a => (a.Name != null && a.Name.ToLower().Equals(search)) ||
+                                         (a.Value != null && a.Value.ToLower().Equals(search)));
+            }
         }
 
         var totalRecords = await query.CountAsync().ConfigureAwait(false);
@@ -66,10 +84,14 @@ public class StatsColorController : ControllerBase
         switch (dataTablesRequest.SortColumn)
         {
             case 0:
-                result = isAscending ? result.OrderBy(x => x.Name).ToList() : result.OrderByDescending(x => x.Name).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Name).ToList()
+                    : result.OrderByDescending(x => x.Name).ToList();
                 break;
             case 1:
-                result = isAscending ? result.OrderBy(x => x.Value).ToList() : result.OrderByDescending(x => x.Value).ToList();
+                result = isAscending
+                    ? result.OrderBy(x => x.Value).ToList()
+                    : result.OrderByDescending(x => x.Value).ToList();
                 break;
         }
 
@@ -84,6 +106,7 @@ public class StatsColorController : ControllerBase
             RedirectToAction("Index");
             return null;
         }
+
         return PartialView("../StatsColor/Index");
     }
 
@@ -95,11 +118,14 @@ public class StatsColorController : ControllerBase
         {
             return RedirectToAction("Index");
         }
-        var databaseStatsColor = await DatabaseManager.Settings.FirstOrDefaultAsync(x => x.Name.Equals(color.Name)).ConfigureAwait(false);
+
+        var databaseStatsColor = await DatabaseManager.Settings.FirstOrDefaultAsync(x => x.Name.Equals(color.Name))
+            .ConfigureAwait(false);
         if (databaseStatsColor == null)
         {
             return RedirectToAction("Index");
         }
+
         databaseStatsColor.Value = color.Value;
 
         // Update the entity
@@ -119,7 +145,11 @@ public class StatsColorController : ControllerBase
             RedirectToAction("Index");
             return null;
         }
-        if (name == null || !name.EndsWith("COLOR")) { return RedirectToAction("Index"); }
+
+        if (name == null || !name.EndsWith("COLOR"))
+        {
+            return RedirectToAction("Index");
+        }
 
         ColorViewModel model = null;
 
@@ -129,9 +159,10 @@ public class StatsColorController : ControllerBase
             model = new ColorViewModel
             {
                 Name = color.Name,
-                Value = color.Value,
+                Value = color.Value
             };
         }
+
         return PartialView("statsColorModal", model);
     }
 }

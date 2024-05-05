@@ -19,10 +19,9 @@ using System;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 
-namespace EonaCat.Dns.Core.MultiCast
+namespace EonaCat.Dns.Core.MultiCast;
+
+public class NetworkInterfaceEventArgs : EventArgs
 {
-    public class NetworkInterfaceEventArgs : EventArgs
-    {
-        public IEnumerable<NetworkInterface> NetworkInterfaces { get; set; }
-    }
+    public IEnumerable<NetworkInterface> NetworkInterfaces { get; set; }
 }

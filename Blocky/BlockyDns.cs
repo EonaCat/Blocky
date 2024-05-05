@@ -1,82 +1,88 @@
-﻿using EonaCat.Blocky.Helpers;
-using EonaCat.Dns;
-using EonaCat.Dns.Managers.Stats;
-using EonaCat.Helpers.Helpers;
-using EonaCat.Logger;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EonaCat.Blocky.Helpers;
+using EonaCat.Dns;
+using EonaCat.Dns.Managers.Stats;
+using EonaCat.Helpers.Helpers;
+using EonaCat.Logger;
 using DllInfo = EonaCat.Dns.DllInfo;
 
-namespace EonaCat.Blocky
+namespace EonaCat.Blocky;
+
+public static class BlockyDns
 {
-    // Blocky
-    // Blocking domains the way you want it.
-    // Copyright EonaCat (Jeroen Saey) 2017-2023
-    // https://blocky.EonaCat.com
+    private static EonaCatDns _eonaCatDns;
+    public static bool IsRunning { get; private set; }
 
-    public static class BlockyDns
+    public static async Task<StatsOverview> GetDnsStatsAsync()
     {
-        private static EonaCatDns _eonaCatDns;
-        public static bool IsRunning { get; private set; }
+        return await _eonaCatDns.GetStatsOverviewAsync().ConfigureAwait(false);
+    }
 
-        public static Task<StatsOverview> GetDnsStatsAsync()
-        {
-            return _eonaCatDns.GetStatsOverviewAsync();
-        }
-
-        public static async Task StartAsync(ELogType maxLogType = ELogType.INFO)
+    public static async Task StartAsync(ELogType maxLogType = ELogType.DEBUG)
+    {
+        if (!IsRunning)
         {
             if (!IsRunning)
             {
                 IsRunning = true;
-
-                Console.Title = $"〠 Blocky {AppInfo.Version} - Blocking domains the way you want it 〠";
-
-                // Initialise blocky
-                Logger.UseLocalTime = Config.LogInLocalTime;
-                Logger.MaxLogType = maxLogType;
-
-                Logger.Configure();
-                Logger.Log(Config.GetHeader());
-
-                // Hide the version (if needed)
-                AppInfo.HideVersion = Config.HideVersion;
-
-                await StartEonaCatDnsAsync().ConfigureAwait(false);
-
-                if (_eonaCatDns.IsRunning)
-                {
-                    if (_eonaCatDns.IsFirstTime && Config.LoadDefaultBlockySetup)
-                    {
-                        var fileTask = DownloadBlockySetupAsync();
-                        await Task.WhenAll(fileTask).ConfigureAwait(false);
-                    }
-                }
-
-                Console.WriteLine(Config.GetHeader());
             }
             else
             {
-                Logger.Log("Blocky Dns is already running", ELogType.DEBUG);
+                await Logger.LogAsync("Blocky Dns is already running", ELogType.DEBUG).ConfigureAwait(false);
+                return;
             }
-        }
 
-        private static async Task DownloadBlockySetupAsync(bool forceReload = false)
-        {
-            Logger.Log("Retrieving blockList for Blocky", ELogType.DEBUG);
-            var setup = Config.GetBlockySetup(forceReload);
+            Console.Title = $"〠 Blocky {AppInfo.Version} - Blocking domains the way you want it 〠";
 
-            if (setup.Any())
+            // Initialise blocky
+            Logger.UseLocalTime = Config.LogInLocalTime;
+            Logger.MaxLogType = maxLogType;
+
+            Logger.Configure();
+            await Logger.LogAsync(Config.GetHeader()).ConfigureAwait(false);
+
+            // Hide the version (if needed)
+            AppInfo.HideVersion = Config.HideVersion;
+
+            await StartEonaCatDnsAsync().ConfigureAwait(false);
+
+            if (_eonaCatDns.IsRunning)
             {
-                await _eonaCatDns.AddBlockedEntriesAsync(setup, Config.BlockyRedirectionserver).ConfigureAwait(false);
-                Logger.Log("Retrieved blockList for Blocky", ELogType.DEBUG);
+                if (_eonaCatDns.IsFirstTime && Config.LoadDefaultBlockySetup)
+                {
+                    await DownloadBlockySetupAsync().ConfigureAwait(false);
+                }
             }
+
+            Console.WriteLine(Config.GetHeader());
+        }
+        else
+        {
+            await Logger.LogAsync("Blocky Dns is already running", ELogType.DEBUG).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task DownloadBlockySetupAsync(bool forceReload = false)
+    {
+        await Logger.LogAsync("Retrieving blockList for Blocky", ELogType.DEBUG);
+        var setup = await Config.GetBlockySetupAsync(forceReload).ConfigureAwait(false);
+
+        if (setup != null && !setup.Any())
+        {
+            return;
         }
 
-        private static Task StartEonaCatDnsAsync()
+        await _eonaCatDns.AddBlockedEntriesAsync(setup, Config.BlockyRedirectionserver).ConfigureAwait(false);
+        await Logger.LogAsync("Retrieved blockList for Blocky", ELogType.DEBUG).ConfigureAwait(false);
+    }
+
+    private static async Task StartEonaCatDnsAsync()
+    {
+        await Task.Run(async () =>
         {
             var config = new EonaCatDnsConfig
             {
@@ -110,7 +116,7 @@ namespace EonaCat.Blocky
                 RouterDomain = Config.RouterDomain,
                 PartialLookupName = Config.PartialLookupName,
                 ProgressToConsole = Config.ProgressToConsole,
-                LogInLocalTime = Config.LogInLocalTime,
+                LogInLocalTime = Config.LogInLocalTime
             };
 
             DllInfo.ApplicationVersion = AppInfo.Version;
@@ -121,38 +127,44 @@ namespace EonaCat.Blocky
             _eonaCatDns.OnUpdateSetup -= EonaCatDns_OnUpdateSetup;
             _eonaCatDns.OnUpdateSetup += EonaCatDns_OnUpdateSetup;
             _eonaCatDns.UseExceptionHandling();
-            return _eonaCatDns.StartAsync();
-        }
 
-        private static void EonaCatDns_OnUpdateSetup(object sender, EventArgs e)
+            await _eonaCatDns.StartAsync().ConfigureAwait(false);
+        });
+    }
+
+    private static async void EonaCatDns_OnUpdateSetup(object sender, EventArgs e)
+    {
+        await DownloadBlockySetupAsync(true).ConfigureAwait(false);
+    }
+
+    private static async Task SendStatisticsAsync()
+    {
+        var previous = Config.Loglevel;
+        Config.Loglevel = ELogType.NONE;
+
+        if (Debugger.IsAttached)
         {
-            DownloadBlockySetupAsync(true).ConfigureAwait(false);
+            return;
         }
 
-        private static void SendStatistics()
+        var stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine(
+            $"{WebHelper.GetExternalIpAddress()} started Blocky {AppInfo.VersionName} version {AppInfo.Version}");
+
+        var slack = new SlackClient(Config.SlackUrl);
+        await slack.PostMessageAsync(new Payload
+            { Channel = "Blocky", Username = "Blocky", Text = stringBuilder.ToString() }).ConfigureAwait(false);
+        Config.Loglevel = previous;
+    }
+
+    private static async Task StopAsync()
+    {
+        if (_eonaCatDns != null)
         {
-            var previous = Config.Loglevel;
-            Config.Loglevel = ELogType.NONE;
-
-            if (Debugger.IsAttached)
-            {
-                return;
-            }
-
-            var stringBuilder = new StringBuilder();
-            stringBuilder.AppendLine(
-                $"{WebHelper.GetExternalIpAddress()} started Blocky {AppInfo.VersionName} version {AppInfo.Version}");
-
-            var slack = new SlackClient(Config.SlackUrl);
-            slack.PostMessage(new Payload { Channel = "Blocky", Username = "Blocky", Text = stringBuilder.ToString() });
-            Config.Loglevel = previous;
+            await _eonaCatDns.StopAsync().ConfigureAwait(false);
         }
 
-        private static void Stop()
-        {
-            _eonaCatDns.Stop();
-            Logger.Log($"Blocky {DllInfo.Version} has been stopped.");
-            IsRunning = false;
-        }
+        await Logger.LogAsync($"Blocky {DllInfo.Version} has been stopped.").ConfigureAwait(false);
+        IsRunning = false;
     }
 }

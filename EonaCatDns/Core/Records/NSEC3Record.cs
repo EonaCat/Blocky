@@ -15,104 +15,98 @@ See the License for the specific language governing permissions and
 limitations under the License
 */
 
-using EonaCat.Dns.Core.Base;
 using System.Collections.Generic;
 using System.Linq;
+using EonaCat.Dns.Core.Base;
 
-namespace EonaCat.Dns.Core.Records
+namespace EonaCat.Dns.Core.Records;
+
+public class Nsec3Record : ResourceRecord
 {
-    public class Nsec3Record : ResourceRecord
+    public Nsec3Record()
     {
-        public Nsec3Record()
+        Type = RecordType.Nsec3;
+    }
+
+    public DigestType HashAlgorithm { get; set; }
+
+    public Nsec3Flags Flags { get; set; }
+
+    public ushort Iterations { get; set; }
+
+    public byte[] Salt { get; set; }
+
+    public byte[] NextHashedOwnerName { get; set; }
+
+    public List<RecordType> Types { get; set; } = new();
+
+    public override void ReadData(DnsReader reader, int length)
+    {
+        var end = reader.CurrentPosition + length;
+
+        HashAlgorithm = (DigestType)reader.ReadByte();
+        Flags = (Nsec3Flags)reader.ReadByte();
+        Iterations = reader.ReadUInt16();
+        Salt = reader.ReadByteLengthPrefixedBytes();
+        NextHashedOwnerName = reader.ReadByteLengthPrefixedBytes();
+
+        while (reader.CurrentPosition < end) Types.AddRange(reader.ReadBitmap().Select(t => (RecordType)t));
+    }
+
+    public override void WriteData(DnsWriter writer)
+    {
+        writer.WriteByte((byte)HashAlgorithm);
+        writer.WriteByte((byte)Flags);
+        writer.WriteUInt16(Iterations);
+        writer.WriteByteLengthPrefixedBytes(Salt);
+        writer.WriteByteLengthPrefixedBytes(NextHashedOwnerName);
+        writer.WriteBitmap(Types.Select(t => (ushort)t));
+    }
+
+    public override void ReadData(MasterReader reader)
+    {
+        HashAlgorithm = (DigestType)reader.ReadByte();
+        Flags = (Nsec3Flags)reader.ReadByte();
+        Iterations = reader.ReadUInt16();
+
+        var salt = reader.ReadString();
+        if (salt != "-")
         {
-            Type = RecordType.Nsec3;
+            Salt = Base16Converter.ToBytes(salt);
         }
 
-        public DigestType HashAlgorithm { get; set; }
+        NextHashedOwnerName = Base32Converter.ToBytes(reader.ReadString());
 
-        public Nsec3Flags Flags { get; set; }
+        while (!reader.IsEndOfLine()) Types.Add(reader.ReadDnsType());
+    }
 
-        public ushort Iterations { get; set; }
+    public override void WriteData(MasterWriter writer)
+    {
+        writer.WriteByte((byte)HashAlgorithm);
+        writer.WriteByte((byte)Flags);
+        writer.WriteUInt16(Iterations);
 
-        public byte[] Salt { get; set; }
-
-        public byte[] NextHashedOwnerName { get; set; }
-
-        public List<RecordType> Types { get; set; } = new();
-
-        public override void ReadData(DnsReader reader, int length)
+        if (Salt == null || Salt.Length == 0)
         {
-            var end = reader.CurrentPosition + length;
-
-            HashAlgorithm = (DigestType)reader.ReadByte();
-            Flags = (Nsec3Flags)reader.ReadByte();
-            Iterations = reader.ReadUInt16();
-            Salt = reader.ReadByteLengthPrefixedBytes();
-            NextHashedOwnerName = reader.ReadByteLengthPrefixedBytes();
-
-            while (reader.CurrentPosition < end)
-            {
-                Types.AddRange(reader.ReadBitmap().Select(t => (RecordType)t));
-            }
+            writer.WriteString("-");
+        }
+        else
+        {
+            writer.WriteBase16String(Salt);
         }
 
-        public override void WriteData(DnsWriter writer)
+        writer.WriteString(Base32Converter.ToString(NextHashedOwnerName).ToLowerInvariant());
+
+        var next = false;
+        foreach (var type in Types)
         {
-            writer.WriteByte((byte)HashAlgorithm);
-            writer.WriteByte((byte)Flags);
-            writer.WriteUInt16(Iterations);
-            writer.WriteByteLengthPrefixedBytes(Salt);
-            writer.WriteByteLengthPrefixedBytes(NextHashedOwnerName);
-            writer.WriteBitmap(Types.Select(t => (ushort)t));
-        }
-
-        public override void ReadData(MasterReader reader)
-        {
-            HashAlgorithm = (DigestType)reader.ReadByte();
-            Flags = (Nsec3Flags)reader.ReadByte();
-            Iterations = reader.ReadUInt16();
-
-            var salt = reader.ReadString();
-            if (salt != "-")
+            if (next)
             {
-                Salt = Base16Converter.ToBytes(salt);
+                writer.WriteSpace();
             }
 
-            NextHashedOwnerName = Base32Converter.ToBytes(reader.ReadString());
-
-            while (!reader.IsEndOfLine())
-            {
-                Types.Add(reader.ReadDnsType());
-            }
-        }
-
-        public override void WriteData(MasterWriter writer)
-        {
-            writer.WriteByte((byte)HashAlgorithm);
-            writer.WriteByte((byte)Flags);
-            writer.WriteUInt16(Iterations);
-
-            if (Salt == null || Salt.Length == 0)
-            {
-                writer.WriteString("-");
-            }
-            else
-            {
-                writer.WriteBase16String(Salt);
-            }
-
-            writer.WriteString(Base32Converter.ToString(NextHashedOwnerName).ToLowerInvariant());
-
-            var next = false;
-            foreach (var type in Types)
-            {
-                if (next)
-                {
-                    writer.WriteSpace();
-                }
-                writer.WriteDnsType(type, appendSpace: false);
-                next = true;
-            }
+            writer.WriteDnsType(type, false);
+            next = true;
         }
     }
 }

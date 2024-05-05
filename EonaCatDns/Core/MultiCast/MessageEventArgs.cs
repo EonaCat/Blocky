@@ -18,14 +18,13 @@ limitations under the License
 using System;
 using System.Net;
 
-namespace EonaCat.Dns.Core.MultiCast
+namespace EonaCat.Dns.Core.MultiCast;
+
+public class MessageEventArgs : EventArgs
 {
-    public class MessageEventArgs : EventArgs
-    {
-        public Message Message { get; set; }
+    public Message Message { get; set; }
 
-        public IPEndPoint RemoteEndPoint { get; set; }
+    public IPEndPoint RemoteEndPoint { get; set; }
 
-        public bool IsLegacyUnicast => RemoteEndPoint?.Port != MultiCastClient.MultiCastPort;
-    }
+    public bool IsLegacyUnicast => RemoteEndPoint?.Port != MultiCastClient.MultiCastPort;
 }

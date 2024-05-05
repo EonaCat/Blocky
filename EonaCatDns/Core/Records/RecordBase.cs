@@ -14,8 +14,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
 */
+
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using EonaCat.Dns.Core;
 using EonaCat.Dns.Core.Records;
 
@@ -31,6 +33,19 @@ public abstract class RecordBase : IDns, ICloneable
 
     internal bool IsExpired => HasPacketError || DateTime.Now > TimeExpired;
 
+    public virtual object Clone()
+    {
+        using var ms = new MemoryStream();
+        Write(ms);
+        ms.Position = 0;
+        var clone = (ResourceRecord)Read(ms).Result;
+        clone.TimeCreated = TimeCreated;
+        return clone;
+    }
+
+    public abstract Task<IDns> Read(DnsReader reader);
+    public abstract void Write(DnsWriter writer);
+
     public int Length()
     {
         using var ms = new MemoryStream();
@@ -39,38 +54,28 @@ public abstract class RecordBase : IDns, ICloneable
         return (int)ms.Length;
     }
 
-    public virtual object Clone()
-    {
-        using var ms = new MemoryStream();
-        Write(ms);
-        ms.Position = 0;
-        var clone = (ResourceRecord)Read(ms);
-        clone.TimeCreated = TimeCreated;
-        return clone;
-    }
-
     public T Clone<T>() where T : ResourceRecord
     {
         return (T)Clone();
     }
 
-    public IDns Read(byte[] buffer)
+    public async Task<IDns> Read(byte[] buffer)
     {
-        return Read(buffer, 0, buffer.Length);
+        return await Read(buffer, 0, buffer.Length).ConfigureAwait(false);
     }
 
-    public IDns Read(byte[] buffer, int offset, int count)
+    public async Task<IDns> Read(byte[] buffer, int offset, int count)
     {
         using var ms = new MemoryStream(buffer, offset, count, false);
-        return Read(new DnsReader(ms, buffer));
+        return await Read(new DnsReader(ms, buffer)).ConfigureAwait(false);
     }
 
-    public IDns Read(Stream stream)
+    public async Task<IDns> Read(Stream stream)
     {
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
         var buffer = ms.ToArray();
-        return Read(new DnsReader(new MemoryStream(buffer), buffer));
+        return await Read(new DnsReader(new MemoryStream(buffer), buffer)).ConfigureAwait(false);
     }
 
     public byte[] ToByteArray()
@@ -84,7 +89,4 @@ public abstract class RecordBase : IDns, ICloneable
     {
         Write(new DnsWriter(stream));
     }
-
-    public abstract IDns Read(DnsReader reader);
-    public abstract void Write(DnsWriter writer);
 }
