@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -72,14 +72,14 @@ public class IndexController : ControllerBase
                     .ConfigureAwait(false);
                 if (currentUser != null &&
                     currentUser.Password ==
-                    UserManager.Instance.GetPasswordHash(userModel.Username, model.OldPassword))
+                    UserManager.GetPasswordHash(userModel.Username, model.OldPassword))
                 {
                     currentUser.Password =
-                        UserManager.Instance.GetPasswordHash(userModel.Username, model.NewPassword);
+                        UserManager.GetPasswordHash(userModel.Username, model.NewPassword);
                     await DatabaseManager
                         .UpdateUserAsync(UserManager.Instance.ChangeCredentials(userModel.Username, model.NewPassword))
                         .ConfigureAwait(false);
-                    await EonaCatDns.Managers.WriteToLog($"Password updated for user '{userModel.Username}'")
+                    await Managers.Managers.WriteToLog($"Password updated for user '{userModel.Username}'")
                         .ConfigureAwait(false);
                     CreateAlertBag("Your password was changed successfully!", "Changed");
                 }
@@ -109,7 +109,7 @@ public class IndexController : ControllerBase
             if (model.Username != null && model.Password != null)
             {
                 model.Username = model.Username.ToLower();
-                model.Password = UserManager.Instance.GetPasswordHash(model.Username, model.Password);
+                model.Password = UserManager.GetPasswordHash(model.Username, model.Password);
                 var user = await DatabaseManager.Users
                     .FirstOrDefaultAsync(u => u.Username == model.Username && u.Password == model.Password)
                     .ConfigureAwait(false);

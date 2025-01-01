@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EonaCat.Dns.Core;
@@ -84,32 +85,38 @@ public class DomainController : ControllerBase
         switch (sortColumn)
         {
             case 0:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.Id).ToList()
                     : result.OrderByDescending(x => x.Id).ToList();
                 break;
             case 1:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.Url).ToList()
                     : result.OrderByDescending(x => x.Url).ToList();
                 break;
             case 2:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.ForwardIp).ToList()
                     : result.OrderByDescending(x => x.ForwardIp).ToList();
                 break;
             case 3:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.FromBlockList).ToList()
                     : result.OrderByDescending(x => x.FromBlockList).ToList();
                 break;
             case 4:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.ListType).ToList()
                     : result.OrderByDescending(x => x.ListType).ToList();
                 break;
             case 5:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.Category).ToList()
                     : result.OrderByDescending(x => x.Category).ToList();
                 break;
@@ -134,7 +141,7 @@ public class DomainController : ControllerBase
             categoryId = 0;
         }
 
-        var isNew = domain.Id == 0;
+        var isNew = domain.Id < 0;
         var databaseDomain = isNew
             ? new Domain()
             : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domain.Id).ConfigureAwait(false);
@@ -159,13 +166,19 @@ public class DomainController : ControllerBase
             return RedirectToAction("Index");
         }
 
-        if (!int.TryParse(id, out var domainId) || domainId == 0)
-        {
-            return RedirectToAction("Index");
-        }
+        var isNew = string.IsNullOrEmpty(id) || Convert.ToInt32(id) < 0;
 
-        var model = new DomainViewModel();
-        var domain = await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
+        DomainViewModel model = null;
+        Domain domain = null;
+
+        if (!isNew)
+        {
+            if (!int.TryParse(id, out var domainId))
+            {
+                return RedirectToAction("Index");
+            }
+            domain = await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id.Equals(domainId)).ConfigureAwait(false);
+        }
 
         if (domain != null)
         {
@@ -178,6 +191,11 @@ public class DomainController : ControllerBase
                 FromBlockList = domain.FromBlockList,
                 Url = domain.Url
             };
+        }
+        else if (isNew)
+        {
+            model = new DomainViewModel();
+            model.Id = -1;
         }
 
         model.Categories = (await DatabaseManager.Categories.GetAll().ToListAsync().ConfigureAwait(false))

@@ -84,7 +84,7 @@
         });
 
             $('.addDomain').on("click", function () {
-                var route = '@Url.Action("GetById", "Domain")?id=0';
+                var route = '@Url.Action("GetById", "Domain")?id=-1';
                 $('#partial').load(route);
             });
         });

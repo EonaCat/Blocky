@@ -3,430 +3,94 @@
 <script>
     /*
     EonaCatDns
-    Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+    Optimized Script
+    */
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+    // Constants and variables
+    const token = '@Model.Token';
+    const username = '@Model.Username';
+    const statsRefreshInterval = @ConstantsDns.Stats.RefreshInterval * 1000;
+    const title = '@ViewData["Title"]';
+    let refreshInProgress = false;
+    let isadmin = token !== '';
+    let isDashboardShown = true;
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    const $statIds = [
+        "#totalQueriesStats", "#totalNoErrorStats", "#totalServerFailuresStats",
+        "#totalNameErrorsStats", "#totalRefusedStats", "#totalBlockedStats",
+        "#totalCachedStats", "#totalClientsStats"
+    ];
+    const $percentageIds = [
+        "#totalQueriesStatsPercentage", "#totalNoErrorStatsPercentage",
+        "#totalServerFailuresStatsPercentage", "#totalNameErrorsStatsPercentage",
+        "#totalRefusedStatsPercentage", "#totalBlockedStatsPercentage",
+        "#totalCachedStatsPercentage"
+    ];
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License
-     */
+    const divDashboardSpinner = $("#divDashboardSpinner");
+    const divDashboard = $("#divDashboard");
 
-    var token = '@Model.Token';
-    var username = '@Model.Username';
-    var statsRefreshInterval = @ConstantsDns.Stats.RefreshInterval;
-    var title = '@ViewData["Title"]';
-    var refreshTimerHandle;
-    var isadmin = false;
-
-    function showadmin() {
-        $(".nav-tabs li").removeClass("active");
-        $(".tab-pane").removeClass("active");
-        loadDashboard();
-    }
-
-    function showInfo() {
-        hideAlert();
-        document.title = title;
-        $(".nav-tabs li").removeClass("active");
-        $(".tab-pane").removeClass("active");
+    function loadDashboard() 
+    {
         $("#tabDashboardButton").addClass("active");
-        $("#main").show();
-        $("#divDashboard").hide();
-        $("#divInfo").addClass("active");
-        $("#divInfo").show();
-    }
-
-    function loadDashboard() {
         showDashboard();
         refreshDashboard();
     }
 
-    function showDashboard() {
-        hideAlert();
-        document.title = title;
-        $(".nav-tabs li").removeClass("active");
-        $(".tab-pane").removeClass("active");
-        $("#tabDashboardButton").addClass("active");
-        $("#divInfo").hide();
-        $("#divInfo").removeClass("active");
-        $("#main").show();
-        $("#divDashboard").show();
-    }
-
-    $(function () {
-        var headerHtml = $("#header").html();
-        $("#header").html(`<div class="title">
-            <a href="/">
-                  <img src="/images/logo.svg" style="width: 30px" alt="EonaCat Logo" />
-            </a>${headerHtml}
-          </div>`);
-
-        $("[name=radioStatsType]").each(function (i) {
-            $(this).change(function () {
-                refreshDashboard();
-            });
-        });
-
-        isadmin = token !== '';
-        if (isadmin) {
-            $(document).on('click', '.editDomain', function () {
-                var id = $(this).data('id');
-                var route = '@Url.Action("GetById", "Domain")?id=' + id;
-                $('#partial').load(route);
-            });
-
-            showadmin();
-
-            // Periodically update the chart using the specified interval
-            setInterval(function () {
-                if (!refreshInProgress) {
-                    refreshDashboard(true);
-                }
-            }, statsRefreshInterval * 1000);
-        } else {
-            loadDashboard();
-        }
-    });
-
-    function checkLogin() {
-        username = $("#username").val();
-        password = $("#password").val();
-
-        if (username === null || username === "") {
-            shakeModal("modalLogin", "Please enter your username", "alert-warning")
-            return false;
-        }
-
-        if (password === null || password === "") {
-            shakeModal("modalLogin", "Please enter your password", "alert-warning")
-            return false;
-        }
-
-        return true;
-    }
-
-    function checkPassword() {
-        var divChangePasswordalert = $("#divChangePasswordalert");
-        var oldPassword = $("#txtOldPassword").val();
-        var newPassword = $("#txtChangePasswordNewPassword").val();
-        var confirmPassword = $("#txtChangePasswordConfirmPassword").val();
-
-        if (oldPassword === null || oldPassword === "") {
-            showAlert("warning", "Missing", "Please enter your old password.", divChangePasswordalert);
-            return false;
-        }
-
-        if (newPassword === null || newPassword === "") {
-            showAlert("warning", "Missing", "Please enter a new password.", divChangePasswordalert);
-            return false;
-        }
-
-        if (confirmPassword === null || confirmPassword === "") {
-            showAlert("warning", "Missing", "Please confirm your password.", divChangePasswordalert);
-            return false;
-        }
-
-        if (newPassword !== confirmPassword) {
-            showAlert("warning", "Mismatch", "Passwords do not match. Please try again.", divChangePasswordalert);
-            return false;
-        }
-        return true;
-    }
-
-    const $statIds = ["#totalQueriesStats", "#totalNoErrorStats", "#totalServerFailuresStats", "#totalNameErrorsStats", "#totalRefusedStats", "#totalBlockedStats", "#totalCachedStats", "#totalClientsStats"];
-    const $percentageIds = ["#totalQueriesStatsPercentage", "#totalNoErrorStatsPercentage", "#totalServerFailuresStatsPercentage", "#totalNameErrorsStatsPercentage", "#totalRefusedStatsPercentage", "#totalBlockedStatsPercentage", "#totalCachedStatsPercentage"];
-    const divDashboardSpinner = $("#divDashboardSpinner");
-    const divDashboard = $("#divDashboard");
-    var refreshInProgress = false;
-
-    async function refreshDashboard(hideLoader = null) {
-        if (refreshInProgress) {
-            // A refresh is already in progress, so skip this call
-            return;
-        }
+    // Refresh dashboard with updated stats
+    async function refreshDashboard(hideLoader = false) {
+        if (refreshInProgress) return;
 
         if (!hideLoader) {
             divDashboard.hide();
             divDashboardSpinner.show();
-        }
-        else {
+        } else {
             divDashboardSpinner.hide();
         }
 
         refreshInProgress = true;
 
         const type = $("input[name=radioStatsType]:checked").val();
-
         await HTTPRequest({
             url: `/api/stats?token=${token}&type=${type}`,
             async: true,
-            loader: divDashboardSpinner,
-            alert: hideLoader,
-            success: function (responseJSON) {
-                const result = responseJSON.response;
-                const stats = result.stats;
-                if (stats == null) {
-                    return;
-                }
-                const keys = Object.keys(stats);
-                const totalQueries = stats.totalQueries;
-
-                $statIds.forEach((id, i) => {
-                    $(id).text(stats[keys[i]].toLocaleString());
-                });
-
-                if (totalQueries > 0) {
-                    $percentageIds.forEach((id, i) => {
-                        const percentage = (stats[keys[i]] * 100 / totalQueries).toFixed(2);
-                        $(id).text(`${percentage}%`);
-                    });
-                } else {
-                    $percentageIds.forEach(id => {
-                        $(id).text("0%");
-                    });
-                }
-
-                UpdateCharts(result);
-
-                if (!hideLoader) {
-                    divDashboardSpinner.hide();
-                }
-
-                if (!$("#tabDashboardButton").hasClass("active")) {
-                    return;
-                }
-
-                if ($("#divInfo").hasClass("active")) {
-                    return;
-                }
-
-                divDashboard.show();
-            },
-            error: function () {
-                if (!hideLoader) {
-                    divDashboardSpinner.hide();
-                    divDashboard.show();
-                }
-            },
-            invalidToken: function () {
-                loadDashboard();
-            }
+            success: (responseJSON) => updateStats(responseJSON.response),
+            error: () => handleDashboardError(),
+            invalidToken: loadDashboard
         });
+        updateDashboardView();
         refreshInProgress = false;
-        return false;
     }
 
-    function UpdateCharts(result) {
-        // Stats chart
-        if (!window.chartDashboardMain) {
-            const canvasStats = document.getElementById("stats").getContext("2d");
-            window.chartDashboardMain = new Chart(canvasStats, {
-                type: "line",
-                data: result.statisticsData,
-                options: {
-                    elements: {
-                        line: {
-                            tension: 0.2
-                        }
-                    }
-                }
-            });
-        } else {
-            window.chartDashboardMain.data = result.statisticsData;
-            window.chartDashboardMain.update();
+    function updateDashboardView()
+    {
+        if (!$("#tabDashboardButton").hasClass("active"))
+        {
+            return;
         }
 
-        // Hide or show topList based on conditions
-        $('.topList').toggle(isadmin && result.queryTypeChartData.labels.length > 0);
+        hideAlert();
+        document.title = title;
 
-        // Query type chart
-        let chartqueryDonut = window.chartqueryDonut;
-        if (!chartqueryDonut) {
-            var queryDonut = document.getElementById("queryDonut");
-            if (queryDonut != null) 
-            {
-                const contextqueryDonut = queryDonut.getContext("2d");
-                chartqueryDonut = window.chartqueryDonut = new Chart(contextqueryDonut, {
-                    type: "doughnut",
-                    data: result.queryTypeChartData,
-                    options: {
-                        cutoutPercentage: 80,
-                        aspectRatio: 1
-                    }
-                });
-            }
-        } else {
-            chartqueryDonut.data = result.queryTypeChartData;
-            chartqueryDonut.update();
+        $(".nav-tabs li").removeClass("active");
+        $(".tab-pane").removeClass("active");
+        $("#tabDashboardButton").addClass("active");
+        $("#main").show();
+
+        if (isDashboardShown)
+        {
+            $("#divInfo").hide();
+            $("#divInfo").removeClass("active");
+            $("#divDashboard").show();
         }
-
-        // Call createTable with a delay for each table
-        setTimeout(() => createTable("topBlocked", result.topBlocked), 100);
-        setTimeout(() => createTable("topClients", result.topClients), 100);
-        setTimeout(() => createTable("topDomains", result.topDomains), 100);
-        setTimeout(() => createTable("lastQueries", result.lastQueries), 100);
-    }
-
-
-    function allowedButton(id) {
-        var button = '<a href="#" title="Add to the allowList" onclick = "return allowDomain(' + id + ');"> Allow</a>';
-        return button;
-    }
-
-    function allowDomain(id) {
-        HTTPRequest({
-            url: "/api/allowDomain?token=" + token + "&id=" + id,
-            async: true,
-            success: function (responseJSON) {
-                location.reload();
-            },
-
-            invalidToken: function () {
-                logout();
-                loadDashboard();
-            },
-        });
-
-        return false;
-    }
-
-    function allowClientButton(name) {
-        var button = '<a href="#" title="Allow the client" onclick = "return allowClient(\'' + name + '\');"> Allow</a>';
-        return button;
-    }
-
-    function blockClientButton(name) {
-        var button = '<a href="#" title="Block the client" onclick = "return blockClient(\'' + name + '\');"> Block</a>';
-        return button;
-    }
-
-
-    function allowButton(id) {
-        var button = '<a href="#" title="Add to the allowList" onclick = "return allowDomain(' + id + ');"> Allow</a>';
-        return button;
-    }
-
-    function blockedButton(id) {
-        var button = '<a href="#" title="Add to the blockList" onclick = "return blockDomain(' + id + ');"> Block</a>';
-        return button;
-    }
-
-    function defaultButton(id) {
-        var button = '<a href="#" title="Add to the default List" onclick = "return defaultDomain(' + id + ');"> Default</a>';
-        return button;
-    }
-
-    function defaultDomain(id) {
-        HTTPRequest({
-            url: "/api/defaultDomain?token=" + token + "&id=" + id,
-            async: true,
-            success: function (responseJSON) {
-                location.reload();
-            },
-
-            invalidToken: function () {
-                logout();
-                loadDashboard();
-            },
-        });
-
-        return false;
-    }
-
-    function allowClient(name) {
-        HTTPRequest({
-            url: "/api/allowClient?token=" + token + "&name=" + name,
-            async: true,
-            success: function (responseJSON) {
-                location.reload();
-            },
-
-            invalidToken: function () {
-                logout();
-                loadDashboard();
-            },
-        });
-
-        return false;
-    }
-
-    function blockClient(name) {
-        HTTPRequest({
-            url: "/api/blockClient?token=" + token + "&name=" + name,
-            async: true,
-            success: function (responseJSON) {
-                location.reload();
-            },
-
-            invalidToken: function () {
-                logout();
-                loadDashboard();
-            },
-        });
-
-        return false;
-    }
-
-
-    function blockDomain(id) {
-        HTTPRequest({
-            url: "/api/blockDomain?token=" + token + "&id=" + id,
-            async: true,
-            success: function (responseJSON) {
-                location.reload();
-            },
-
-            invalidToken: function () {
-                logout();
-                loadDashboard();
-            },
-        });
-
-        return false;
-    }
-
-    function createTable(tableId, data) {
-        const $table = $("#" + tableId);
-        let tableHtml = "<thead><tr><th>Name</th><th>&nbsp;</th></tr></thead><tbody>";
-
-        if (!data || data.length === 0) {
-            tableHtml += "<tr><td colspan='2'>No Data</td></tr>";
-        } else {
-            const isTopDomains = tableId === "topDomains" || tableId === "topBlocked" || tableId === "lastQueries";
-            const isTopClients = tableId === "topClients";
-
-            for (const item of data) {
-                const { id, name, isBlocked, alias } = item;
-                const blockedClass = isBlocked ? "denied" : "allowed";
-                let nameHtml = name;
-                let buttonHtml = "";
-
-                if (isTopDomains && id) {
-                    nameHtml = `<a href='/Domain/Index' class='editDomain' data-bs-toggle="modal" data-bs-target="#EonaCatModal" data-id='${id}'>${name}</a>`;
-                    buttonHtml = isBlocked ? `${allowButton(id)} ${defaultButton(id)}` : blockedButton(id);
-                }
-
-                if (isTopClients && name) {
-                    buttonHtml = isBlocked ? allowClientButton(name) : blockClientButton(name);
-                }
-
-                tableHtml += `<tr class='${blockedClass}'${isTopClients ? ` title='${alias}'` : ""}>
-                        <td>${nameHtml}</td>
-                        <td${isTopDomains ? " style='width:30%'" : ""}>${buttonHtml}</td>
-                    </tr>`;
-            }
+        else
+        {
+            $("#divInfo").show();
+            $("#divInfo").addClass("active");
+            $("#divDashboard").hide();
         }
-
-        tableHtml += "</tbody>";
-        $table.html(tableHtml);
     }
+
 
     function refreshLogFilesList() {
         const lstLogFiles = $("#lstLogFiles");
@@ -525,5 +189,248 @@
         });
 
         return false;
+    }
+
+    function defaultDomain(id) {
+        HTTPRequest({
+            url: "/api/defaultDomain?token=" + token + "&id=" + id,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function allowClient(name) {
+        HTTPRequest({
+            url: "/api/allowClient?token=" + token + "&name=" + name,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function blockClient(name) {
+        HTTPRequest({
+            url: "/api/blockClient?token=" + token + "&name=" + name,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function allowDomain(id) {
+        HTTPRequest({
+            url: "/api/allowDomain?token=" + token + "&id=" + id,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function blockDomain(id) {
+        HTTPRequest({
+            url: "/api/blockDomain?token=" + token + "&id=" + id,
+            async: true,
+            success: function (responseJSON) {
+                location.reload();
+            },
+
+            invalidToken: function () {
+                logout();
+                loadDashboard();
+            },
+        });
+
+        return false;
+    }
+
+    function updateStats(result) {
+        const stats = result.stats;
+        if (!stats) return;
+
+        const keys = Object.keys(stats);
+        const totalQueries = stats.totalQueries;
+
+        $statIds.forEach((id, i) => $(id).text(stats[keys[i]].toLocaleString()));
+        $percentageIds.forEach((id, i) => {
+            const percentage = totalQueries > 0
+                ? ((stats[keys[i]] * 100) / totalQueries).toFixed(2) + '%'
+                : '0%';
+            $(id).text(percentage);
+        });
+
+        UpdateCharts(result);
+        if ($("#tabDashboardButton").hasClass("active")) divDashboard.show();
+        divDashboardSpinner.hide();
+    }
+
+    function handleDashboardError() {
+        divDashboardSpinner.hide();
+        divDashboard.show();
+    }
+
+    function UpdateCharts(result) {
+        // Stats chart
+        if (!window.chartDashboardMain) {
+            const canvasStats = document.getElementById("stats").getContext("2d");
+            window.chartDashboardMain = new Chart(canvasStats, {
+                type: "line",
+                data: result.statisticsData,
+                options: {
+                    elements: {
+                        line: {
+                            tension: 0.2
+                        }
+                    }
+                }
+            });
+        } else if (typeof window.chartDashboardMain.update === "function") {
+            window.chartDashboardMain.data = result.statisticsData;
+            window.chartDashboardMain.update();
+        }
+
+        // Hide or show topList based on conditions
+        $('.topList').toggle(isadmin && result.queryTypeChartData.labels.length > 0);
+
+        // Query type chart
+        let chartqueryDonut = window.chartqueryDonut;
+        if (!chartqueryDonut) {
+            const queryDonut = document.getElementById("queryDonut");
+            if (queryDonut) {
+                const contextqueryDonut = queryDonut.getContext("2d");
+                chartqueryDonut = window.chartqueryDonut = new Chart(contextqueryDonut, {
+                    type: "doughnut",
+                    data: result.queryTypeChartData,
+                    options: {
+                        cutoutPercentage: 80,
+                        aspectRatio: 1
+                    }
+                });
+            }
+        } else if (typeof chartqueryDonut.update === "function") {
+            chartqueryDonut.data = result.queryTypeChartData;
+            chartqueryDonut.update();
+        }
+
+        // Call createTable with a delay for each table
+        setTimeout(() => createTable("topBlocked", result.topBlocked), 100);
+        setTimeout(() => createTable("topClients", result.topClients), 100);
+        setTimeout(() => createTable("topDomains", result.topDomains), 100);
+        setTimeout(() => createTable("lastQueries", result.lastQueries), 100);
+    }
+
+    function showInfo() 
+    {
+        isDashboardShown = false;
+        updateDashboardView();
+    }
+
+    function showDashboard() 
+    {
+        isDashboardShown = true;
+        updateDashboardView();
+    }
+
+    function updateChart(chartId, chartType, data, options) {
+        const canvas = document.getElementById(chartId);
+        if (!canvas) return;
+
+        const context = canvas.getContext("2d");
+        if (!window[chartId]) {
+            window[chartId] = new Chart(context, { type: chartType, data, options });
+        } else {
+            window[chartId].data = data;
+            window[chartId].update();
+        }
+    }
+
+    function createTable(tableId, data) {
+        const $table = $(`#${tableId}`);
+        if (!data || data.length === 0) {
+            $table.html("<thead><tr><th>Name</th><th>&nbsp;</th></tr></thead><tbody><tr><td colspan='2'>No Data</td></tr></tbody>");
+            return;
+        }
+
+        const tableRows = data.map(item => {
+            const { id, name, isBlocked, alias } = item;
+            const blockedClass = isBlocked ? "denied" : "allowed";
+            const nameHtml = id ? `<a href='/Domain/Index' class='editDomain' data-bs-toggle="modal" data-bs-target="#EonaCatModal" data-id='${id}'>${name}</a>` : name;
+            const buttonHtml = generateButtons(tableId, id, name, isBlocked);
+
+            return `<tr class='${blockedClass}' title='${alias || ""}'>
+                        <td>${nameHtml}</td>
+                        <td style='width:30%'>${buttonHtml}</td>
+                    </tr>`;
+        }).join('');
+
+        $table.html(`<thead><tr><th>Name</th><th>&nbsp;</th></tr></thead><tbody>${tableRows}</tbody>`);
+    }
+
+    function generateButtons(tableId, id, name, isBlocked) {
+        if (["topDomains", "topBlocked", "lastQueries"].includes(tableId)) {
+            return isBlocked ? `${allowButton(id)} ${defaultButton(id)}` : blockedButton(id);
+        }
+        if (tableId === "topClients") {
+            return isBlocked ? allowClientButton(name) : blockClientButton(name);
+        }
+        return '';
+    }
+
+    // Button Generators
+    const allowButton = id => `<a href="#" onclick="return allowDomain(${id});">Allow</a>`;
+    const blockedButton = id => `<a href="#" onclick="return blockDomain(${id});">Block</a>`;
+    const defaultButton = id => `<a href="#" onclick="return defaultDomain(${id});">Default</a>`;
+    const allowClientButton = name => `<a href="#" onclick="return allowClient('${name}');">Allow</a>`;
+    const blockClientButton = name => `<a href="#" onclick="return blockClient('${name}');">Block</a>`;
+
+    // Event listeners and initialization
+    $(function () {
+        isadmin && setupAdminFeatures();
+        loadDashboard();
+    });
+
+    function setupAdminFeatures() {
+        $("#header").html(`<div class="title">
+            <a href="/"><img src="/images/logo.svg" style="width: 30px" alt="EonaCat Logo" /></a>${$("#header").html()}
+        </div>`);
+
+        $(document).on('click', '.editDomain', function () {
+            const id = $(this).data('id');
+            $('#partial').load(`@Url.Action("GetById", "Domain")?id=${id}`);
+        });
+
+        setInterval(() => !refreshInProgress && refreshDashboard(true), statsRefreshInterval);
     }
 </script>

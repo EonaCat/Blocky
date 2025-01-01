@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace EonaCat.Blocky.Controllers;
 // Blocky
 // Blocking domains the way you want it.
-// Copyright EonaCat (Jeroen Saey) 2017-2023
+// Copyright EonaCat (Jeroen Saey) 2017-2025
 // https://blocky.EonaCat.com
 
 public class BlockyIndexController : Controller

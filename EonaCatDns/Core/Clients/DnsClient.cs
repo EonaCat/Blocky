@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,226 +13,199 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
-
 */
 
-using System;
+using EonaCat.Dns.Core.Clients;
+using EonaCat.Logger;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Threading;
+using System.Net;
 using System.Threading.Tasks;
-using EonaCat.Helpers.Retry;
-using EonaCat.Logger;
-
-namespace EonaCat.Dns.Core.Clients;
+using System.Threading;
+using System;
+using System.Linq;
+using EonaCat.Dns;
+using EonaCat.Dns.Core;
 
 internal class DnsClient : DnsClientBase
 {
     private const int DnsPort = 53;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly TcpClient _tcpClient = new(AddressFamily.InterNetworkV6);
-    private IEnumerable<IPAddress> _servers;
 
-    public static TimeSpan TimeoutUdp { get; set; } = TimeSpan.FromSeconds(5);
-    public static TimeSpan TimeoutTcp { get; set; } = TimeSpan.FromSeconds(5);
+    private readonly UdpClient _udpClient = new();
+    private readonly ConcurrentDictionary<IPAddress, TcpClient> _tcpClients = new();
+    private Lazy<IEnumerable<IPAddress>> LazyServers = new(GetServers);
 
     public IEnumerable<IPAddress> Servers
     {
-        get => _servers ?? GetServers();
-        set => _servers = value;
-    }
-
-    public IEnumerable<IPAddress> AvailableServers()
-    {
-        return Servers.Where(a =>
-            (Socket.OSSupportsIPv4 && a.AddressFamily == AddressFamily.InterNetwork) ||
-            (Socket.OSSupportsIPv6 && a.AddressFamily == AddressFamily.InterNetworkV6));
-    }
-
-    public IEnumerable<IPAddress> GetServers()
-    {
-        return NetworkInterface.GetAllNetworkInterfaces()
-            .Where(x => x.OperationalStatus == OperationalStatus.Up)
-            .Where(x => x.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-            .SelectMany(x => x.GetIPProperties().DnsAddresses);
+        get => LazyServers.Value;
+        set
+        {
+            LazyServers = new(() => value);
+        }
     }
 
     public override async Task<Message> QueryAsync(Message request, CancellationToken cancel = default)
     {
-        var localDnsServers = GetLocalDnsAddresses();
+        var localDnsServers = Servers.Where(a =>
+            (Socket.OSSupportsIPv4 && a.AddressFamily == AddressFamily.InterNetwork) ||
+            (Socket.OSSupportsIPv6 && a.AddressFamily == AddressFamily.InterNetworkV6)).ToArray();
+
         if (localDnsServers.Length == 0)
         {
-            throw new Exception("EonaCatDns: No local Dns servers configured.");
+            throw new Exception("EonaCatDns: No local DNS servers configured.");
         }
 
-        return await GetResponseFromDnsAsync(request, cancel, localDnsServers).ConfigureAwait(false);
-    }
+        await Logger.LogAsync("Starting DNS query.", ELogType.DEBUG, false).ConfigureAwait(false);
 
-    private async Task<Message> GetResponseFromDnsAsync(Message request, CancellationToken cancel,
-        IEnumerable<IPAddress> localDnsServers)
-    {
-        var forwarder = string.Empty;
+        var response = await GetResponseFromDnsAsync(request, localDnsServers, cancel).ConfigureAwait(false);
 
-        if (!request.Questions.Any())
-        {
-            throw new Exception("EonaCatDns: Request must have at least 1 question");
-        }
-
-        Message response = null;
-        foreach (var server in localDnsServers)
-            try
-            {
-                response = await QueryAsync(request, server, cancel).ConfigureAwait(false);
-                if (response?.HasAnswers == true)
-                {
-                    forwarder = server.ToString();
-                    break;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Do nothing
-            }
-            catch (Exception ex)
-            {
-                await Logger.LogAsync(ex, $"Could not resolve Dns using {server}", false);
-            }
-
-        foreach (var question in request.Questions)
-        {
-            if (response == null)
-            {
-                break;
-            }
-
-            if (response.Header.ResponseCode != ResponseCode.NoError)
-            {
-                await Logger.LogAsync($"Dns error received for '{question.Name} '{response.Header.ResponseCode}'.",
-                    ELogType.WARNING);
-            }
-            else if (response.HasAnswers)
-            {
-                await Logger.LogAsync($"Got Dns response for {question.Name} from {forwarder}", ELogType.DEBUG, false);
-            }
-        }
-
+        await Logger.LogAsync("DNS query completed.", ELogType.DEBUG, false).ConfigureAwait(false);
         return response;
     }
 
-    private IPAddress[] GetLocalDnsAddresses()
+    private async Task<Message> GetResponseFromDnsAsync(Message request, IEnumerable<IPAddress> localDnsServers, CancellationToken cancel)
     {
-        var servers = AvailableServers().OrderBy(ipAddress => ipAddress.AddressFamily).ToArray();
-        return servers;
+        var tasks = localDnsServers.Select(async server =>
+        {
+            try
+            {
+                await Logger.LogAsync($"Querying server: {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+                var response = await QueryAsync(request, server, cancel).ConfigureAwait(false);
+
+                if (response?.HasAnswers == true)
+                {
+                    await Logger.LogAsync($"Successful response from server: {server}", ELogType.INFO, false).ConfigureAwait(false);
+                }
+
+                return response;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                await Logger.LogAsync(ex, $"Error querying server: {server}", false).ConfigureAwait(false);
+                return null;
+            }
+        });
+
+        var responses = await Task.WhenAll(tasks).ConfigureAwait(false);
+        return responses.FirstOrDefault(response => response?.HasAnswers == true);
     }
 
     private async Task<Message> QueryAsync(Message request, IPAddress server, CancellationToken cancel)
     {
-        RetryHelper.Instance.DefaultMaxTryCount = 3;
-        RetryHelper.Instance.DefaultMaxTryTime = TimeSpan.FromSeconds(10);
-        RetryHelper.Instance.DefaultTryInterval = TimeSpan.FromMilliseconds(100);
-        var response = new Message();
+        var response = await QueryUdpAsync(request, server, cancel).ConfigureAwait(false);
 
-        try
+        if (response?.Header.IsResponse == true && !response.Header.IsTruncated)
         {
-            response = await QueryUdpAsync(request, server, cancel).ConfigureAwait(false) ?? request;
-            if (response.Header.IsResponse && !response.Header.IsTruncated)
-            {
-                return response;
-            }
-        }
-        catch (SocketException e)
-        {
-            await Logger.LogAsync(e.Message, ELogType.WARNING);
-        }
-        catch (TaskCanceledException e)
-        {
-            await Logger.LogAsync(e.Message, ELogType.WARNING);
+            await Logger.LogAsync($"UDP query successful for server: {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+            return response;
         }
 
-        try
-        {
-            return await QueryTcpAsync(response, server, cancel).ConfigureAwait(false);
-        }
-        catch (Exception e)
-        {
-            await Logger.LogAsync(e.Message, ELogType.WARNING);
-        }
+        await Logger.LogAsync($"UDP response truncated; switching to TCP for server: {server}", ELogType.WARNING, false).ConfigureAwait(false);
 
-        return response;
+        return await QueryTcpAsync(response ?? request, server, cancel).ConfigureAwait(false);
     }
 
     private async Task<Message> QueryUdpAsync(Message request, IPAddress server, CancellationToken cancel)
     {
-        var endPoint = new IPEndPoint(server, DnsPort);
-        using var client = new UdpClient(server.AddressFamily)
+        try
         {
-            DontFragment = true
-        };
+            var endPoint = new IPEndPoint(server, DnsPort);
+            var requestBytes = request.ToByteArray();
 
-        var requestToSend = request.ToByteArray();
-        await client.SendAsync(requestToSend, requestToSend.Length, endPoint).ConfigureAwait(false);
+            await Logger.LogAsync($"Sending UDP query to {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+            await _udpClient.SendAsync(requestBytes, requestBytes.Length, endPoint).WithCancellation(cancel).ConfigureAwait(false);
 
-        var result = await client.ReceiveAsync(cancel).ConfigureAwait(false);
-        var response = request.CreateResponse();
-        await Logger.LogAsync(
-            $"Reading DNS response for '{request.Questions.FirstOrDefault()?.Name}' ('{request.Questions.FirstOrDefault()?.Type}') via '{server}' (UDP)",
-            ELogType.DEBUG, false);
-        await response.Read(result.Buffer).ConfigureAwait(false);
-        return response;
+            var result = await _udpClient.ReceiveAsync(cancel).ConfigureAwait(false);
+
+            var response = request.CreateResponse();
+            await response.Read(result.Buffer).ConfigureAwait(false);
+
+            await Logger.LogAsync($"Received UDP response from {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            await Logger.LogAsync(ex, $"UDP query failed for server: {server}", false).ConfigureAwait(false);
+            return null;
+        }
     }
 
     private async Task<Message> QueryTcpAsync(Message request, IPAddress server, CancellationToken cancel)
     {
-        await _tcpClient.ConnectAsync(server, DnsPort).ConfigureAwait(false);
-        await using var stream = _tcpClient.GetStream();
-
-        var requestToBeSend = request.ToByteArray();
-        var length = BitConverter.GetBytes((ushort)requestToBeSend.Length);
-        if (BitConverter.IsLittleEndian)
+        try
         {
-            Array.Reverse(length);
+            if (!_tcpClients.TryGetValue(server, out var tcpClient) || !tcpClient.Connected)
+            {
+                tcpClient = new TcpClient();
+                _tcpClients[server] = tcpClient;
+
+                await Logger.LogAsync($"Establishing TCP connection to {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+                await tcpClient.ConnectAsync(server, DnsPort, cancel).ConfigureAwait(false);
+            }
+
+            var stream = tcpClient.GetStream();
+            var requestBytes = request.ToByteArray();
+            var lengthPrefix = BitConverter.GetBytes((ushort)requestBytes.Length);
+
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(lengthPrefix);
+            }
+
+            await Logger.LogAsync($"Sending TCP query to {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+            await stream.WriteAsync(lengthPrefix, cancel).ConfigureAwait(false);
+            await stream.WriteAsync(requestBytes, cancel).ConfigureAwait(false);
+            await stream.FlushAsync(cancel).ConfigureAwait(false);
+
+            var lengthBuffer = new byte[2];
+            await stream.ReadAsync(lengthBuffer, cancel).ConfigureAwait(false);
+
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(lengthBuffer);
+            }
+
+            var responseLength = BinaryPrimitives.ReadUInt16BigEndian(lengthBuffer);
+            var responseBuffer = new byte[responseLength];
+            await stream.ReadAsync(responseBuffer, cancel).ConfigureAwait(false);
+
+            var response = request.CreateResponse();
+            await response.Read(responseBuffer).ConfigureAwait(false);
+
+            await Logger.LogAsync($"Received TCP response from {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+            return response;
         }
-
-        await stream.WriteAsync(length.AsMemory(), cancel).ConfigureAwait(false);
-        await stream.WriteAsync(requestToBeSend.AsMemory(), cancel).ConfigureAwait(false);
-        await stream.FlushAsync(cancel).ConfigureAwait(false);
-
-        var buffer = new byte[2];
-        var responseLength = 0;
-
-        await Logger.LogAsync(
-            $"Reading DNS response for '{request.Questions.FirstOrDefault()?.Name}' ('{request.Questions.FirstOrDefault()?.Type}') via '{server}' (TCP)",
-            ELogType.DEBUG, false);
-        await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancel).ConfigureAwait(false);
-
-        if (BitConverter.IsLittleEndian)
+        catch (Exception ex)
         {
-            Array.Reverse(buffer);
-            responseLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer);
+            await Logger.LogAsync(ex, $"TCP query failed for server: {server}", false).ConfigureAwait(false);
+            return null;
         }
-        else
-        {
-            responseLength = BinaryPrimitives.ReadUInt16BigEndian(buffer);
-        }
+    }
 
-        buffer = new byte[responseLength];
-        await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancel).ConfigureAwait(false);
-
-        var response = request.CreateResponse();
-        await response.Read(buffer, 0, buffer.Length).ConfigureAwait(false);
-        return response;
+    private static List<IPAddress> GetServers()
+    {
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.OperationalStatus == OperationalStatus.Up && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+            .SelectMany(ni => ni.GetIPProperties().DnsAddresses)
+            .ToList();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _cancellationTokenSource.Dispose();
-            _tcpClient.Dispose();
+            _udpClient.Dispose();
+
+            foreach (var client in _tcpClients.Values)
+            {
+                client.Close();
+                client.Dispose();
+            }
+
+            _tcpClients.Clear();
         }
 
         base.Dispose(disposing);

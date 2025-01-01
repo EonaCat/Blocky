@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -363,7 +363,7 @@ public class ApiController : ApiControllerBase
             {
                 domain.ListType = ListType.Blocked;
                 await DatabaseManager.Domains.InsertOrUpdateAsync(domain).ConfigureAwait(false);
-                BlockList.AddToCache(domain.Url);
+                await BlockList.MatchAsync(domain.Url).ConfigureAwait(false);
             }
 
             await jsonWriter.WriteEndObjectAsync().ConfigureAwait(false);
@@ -400,7 +400,7 @@ public class ApiController : ApiControllerBase
             jsonWriter.WritePropertyName(ResponseTag);
             jsonWriter.WriteStartObject();
 
-            EonaCatDns.Managers.ApiListLogs(jsonWriter);
+            Managers.Managers.ApiListLogs(jsonWriter);
             jsonWriter.WriteEndObject();
 
             WriteOkStatus(jsonWriter);
@@ -461,7 +461,7 @@ public class ApiController : ApiControllerBase
         try
         {
             IsAuthenticated(token);
-            await EonaCatDns.Managers.ApiLogs(ActionContext.HttpContext.Response, $"{log}.log").ConfigureAwait(false);
+            await Managers.Managers.ApiLogs(ActionContext.HttpContext.Response, $"{log}.log").ConfigureAwait(false);
         }
         catch (WebInvalidTokenException)
         {
@@ -469,7 +469,7 @@ public class ApiController : ApiControllerBase
         }
         catch (Exception exception)
         {
-            await EonaCatDns.Managers.WriteToLog(exception.Message).ConfigureAwait(false);
+            await Managers.Managers.WriteToLog(exception.Message).ConfigureAwait(false);
             return BadRequest("Unknown error occurred, please try again later!");
         }
 

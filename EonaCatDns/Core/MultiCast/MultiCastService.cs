@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -94,6 +94,29 @@ internal class MultiCastService : IDisposable
         return GetIpAddresses()
             .Where(a => a.AddressFamily == AddressFamily.InterNetwork ||
                         (a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal));
+    }
+
+    public static IEnumerable<IPAddress> GetAllIPAddresses()
+    {
+        var addresses = new List<IPAddress>();
+
+        var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+
+        foreach (var networkInterface in networkInterfaces)
+        {
+            var ipProperties = networkInterface.GetIPProperties();
+
+            var unicastAddresses = ipProperties.UnicastAddresses
+                .Select(ua => ua.Address)
+                .Where(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork || // IPv4
+                             ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6); // IPv6
+
+            addresses.AddRange(unicastAddresses);
+        }
+
+        return addresses;
     }
 
     internal async Task StartAsync()

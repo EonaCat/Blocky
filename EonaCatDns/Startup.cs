@@ -1,22 +1,7 @@
-﻿/*
-EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-using System;
+﻿using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -39,10 +24,22 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddDistributedMemoryCache(); // Adds a default in-memory implementation of IDistributedCache
-        services.AddSession();
+        // Configure limited memory caching
+        services.AddDistributedMemoryCache(options =>
+        {
+            options.SizeLimit = 512 * 1024 * 1024;
+        });
+
+        services.AddSession(options =>
+        {
+            options.IdleTimeout = TimeSpan.FromMinutes(20);
+            options.Cookie.HttpOnly = true;
+            options.Cookie.IsEssential = true;
+        });
+
         services.AddMvc(options => options.EnableEndpointRouting = false);
 
+        // Configure WebMarkupMin
         services.AddWebMarkupMin(
                 options =>
                 {
@@ -58,13 +55,19 @@ public class Startup
                 })
             .AddHttpCompression();
 
+        // Optimize response compression
         services.AddResponseCompression(options =>
         {
+            options.Providers.Add<GzipCompressionProvider>();
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.EnableForHttps = true;
+
             options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-                new[] { "text/javascript" }
+                new[] { "text/javascript", "application/json" }
             );
         });
 
+        // Configure logging
         services.AddLogging(config =>
         {
             config.ClearProviders();
@@ -76,6 +79,10 @@ public class Startup
                 config.AddConsole();
             }
         });
+
+        // Set threading optimizations
+        ThreadPool.SetMinThreads(4, 4); // Minimum threads
+        ThreadPool.SetMaxThreads(50, 50); // Cap threads to 50 to limit concurrency
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -106,5 +113,25 @@ public class Startup
         });
 
         app.SetBaseUrl();
+
+        MonitorMemoryUsage();
+    }
+
+    private static void MonitorMemoryUsage()
+    {
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                // Check current memory usage
+                var memoryUsed = GC.GetTotalMemory(false);
+                if (memoryUsed > 1.8 * 1024 * 1024 * 1024)
+                {
+                    Console.WriteLine($"Warning: High memory usage detected: {memoryUsed / (1024 * 1024)} MB.");
+                    GC.Collect();
+                }
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+        });
     }
 }

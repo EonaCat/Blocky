@@ -1,24 +1,43 @@
-﻿using System;
+﻿/*
+EonaCatDns
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License
+*/
+
+using EonaCat.Dns.Core.Clients.HttpResolver;
+using EonaCat.Dns.Core.Clients;
+using EonaCat.Logger;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading;
 using System.Threading.Tasks;
-using EonaCat.Dns.Core.Clients.HttpResolver;
-using EonaCat.Helpers.Retry;
-using EonaCat.Logger;
-
-namespace EonaCat.Dns.Core.Clients;
+using System.Threading;
+using System;
+using System.Linq;
+using System.Net.Http.Headers;
+using EonaCat.Dns;
+using EonaCat.Dns.Core;
 
 internal class DohClient : DnsClientBase
 {
-    public const string DnsWireFormat = "application/dns-message";
-    public const string DnsJsonFormat = "application/dns-json";
+    private const string DnsWireFormat = "application/dns-message";
     private static readonly DnsHandler DnsHandler = new();
-    private static readonly HttpClient HttpClient = new(DnsHandler);
+    private static readonly HttpClient HttpClient = new(DnsHandler) { Timeout = TimeSpan.FromSeconds(10) };
+    private static readonly MediaTypeHeaderValue DnsWireFormatHeaderValue = new MediaTypeHeaderValue(DnsWireFormat);
+
+    private static readonly Random Random = new();
 
     public List<string> Servers { get; set; } = new()
     {
@@ -31,6 +50,7 @@ internal class DohClient : DnsClientBase
     {
         if (request.HasAnswers)
         {
+            await Logger.LogAsync("Request already contains answers; returning as is.", ELogType.DEBUG, false).ConfigureAwait(false);
             return request;
         }
 
@@ -39,60 +59,68 @@ internal class DohClient : DnsClientBase
             throw new Exception("EonaCatDns: Request must have at least 1 question");
         }
 
-        RetryHelper.Instance.DefaultMaxTryCount = 3;
-        RetryHelper.Instance.DefaultMaxTryTime = TimeSpan.FromSeconds(3);
-        RetryHelper.Instance.DefaultTryInterval = TimeSpan.FromMilliseconds(100);
+        Servers = Servers.OrderBy(_ => Random.Next()).ToList(); // Shuffle servers for random selection
+        await Logger.LogAsync($"Shuffled DoH servers: {string.Join(", ", Servers)}", ELogType.DEBUG, false).ConfigureAwait(false);
 
-        Message fastestResponse = null;
+        var tasks = Servers.Select(server => QueryServerAsync(request, server, cancel)).ToList();
+        var responses = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        // Post the request.
-        using var memoryStream = new MemoryStream();
-        request.Write(memoryStream);
-        var content = new ByteArrayContent(memoryStream.ToArray());
-        content.Headers.ContentType = new MediaTypeHeaderValue(DnsWireFormat);
-
-        foreach (var server in Servers)
+        var fastestResponse = responses.FirstOrDefault(response => response != null && response.HasAnswerRecords);
+        if (fastestResponse != null)
         {
-            var response = request.CreateResponse();
-
-            // Run the request in a separate thread
-            await Task.Run(async () =>
-            {
-                var result = await GetDohResponseAsync(server, content, response).ConfigureAwait(false);
-
-                // Only update the fastest response if it is the first one
-                if (result != null && result.HasAnswerRecords && fastestResponse == null)
-                {
-                    fastestResponse = result;
-                }
-            }, cancel).ConfigureAwait(false);
-
-            if (fastestResponse != null)
-            {
-                break;
-            }
+            await Logger.LogAsync($"Fastest response received from server: {fastestResponse.ServerUrl}", ELogType.INFO, false).ConfigureAwait(false);
+        }
+        else
+        {
+            await Logger.LogAsync("No valid responses received from any DoH server.", ELogType.WARNING, false).ConfigureAwait(false);
         }
 
-        // Return the fastest response
         return fastestResponse;
     }
 
-    private static async Task<Message> GetDohResponseAsync(string server, ByteArrayContent content, Message response)
+    private async Task<Message> QueryServerAsync(Message request, string server, CancellationToken cancel)
+    {
+        var question = request.Questions.FirstOrDefault();
+        if (question == null)
+        {
+            await Logger.LogAsync("No valid questions found in the request; skipping server query.", ELogType.WARNING, false).ConfigureAwait(false);
+            return null;
+        }
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            request.Write(memoryStream);
+            var content = new ByteArrayContent(memoryStream.ToArray());
+            content.Headers.ContentType = DnsWireFormatHeaderValue;
+
+            var response = request.CreateResponse();
+            await Logger.LogAsync($"Sending DoH request for '{question.Name}' ('{question.Type}') to '{server}'", ELogType.DEBUG, false).ConfigureAwait(false);
+
+            await GetDohResponseAsync(server, content, response, cancel).ConfigureAwait(false);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            await Logger.LogAsync(ex, $"Error querying DoH server: {server}", false).ConfigureAwait(false);
+            return null;
+        }
+    }
+
+    private static async Task GetDohResponseAsync(string server, ByteArrayContent content, Message response, CancellationToken cancel)
     {
         var question = response.Questions.FirstOrDefault();
         if (question == null)
-            // Invalid question
         {
-            return null;
+            await Logger.LogAsync("Invalid question in response; cannot process.", ELogType.ERROR, false).ConfigureAwait(false);
+            return;
         }
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, server) { Content = content };
         try
         {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-            var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)
-                .ConfigureAwait(false);
+            var stopwatch = Stopwatch.StartNew();
+            var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancel).ConfigureAwait(false);
             stopwatch.Stop();
 
             httpResponse.EnsureSuccessStatusCode();
@@ -101,31 +129,21 @@ internal class DohClient : DnsClientBase
 
             if (httpResponse.Content.Headers.ContentType?.MediaType != DnsWireFormat)
             {
-                throw new HttpRequestException("EonaCatDns: " +
-                                               $"#{response.Header.Id} Expected content-type '{DnsWireFormat}' not '{httpResponse.Content.Headers.ContentType?.MediaType}'.");
+                throw new HttpRequestException($"Expected content-type '{DnsWireFormat}', but got '{httpResponse.Content.Headers.ContentType?.MediaType}'.");
             }
 
-            await Logger.LogAsync($"Reading DoH response for '{question.Name}' ('{question.Type}') via '{server}'",
-                ELogType.DEBUG,
-                false).ConfigureAwait(false);
+            await Logger.LogAsync($"Processing DoH response for '{question.Name}' ('{question.Type}') from '{server}'", ELogType.DEBUG, false).ConfigureAwait(false);
 
-            // Read the response into a new MemoryStream
-            using (var responseBodyStream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false))
-            {
-                var responseMemoryStream = new MemoryStream();
-                await responseBodyStream.CopyToAsync(responseMemoryStream).ConfigureAwait(false);
-                responseMemoryStream.Position = 0;
+            using var responseBodyStream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var responseMemoryStream = new MemoryStream();
+            await responseBodyStream.CopyToAsync(responseMemoryStream).ConfigureAwait(false);
+            responseMemoryStream.Position = 0;
 
-                // Use the new MemoryStream to read the response
-                await response.Read(responseMemoryStream).ConfigureAwait(false);
-            }
+            await response.Read(responseMemoryStream).ConfigureAwait(false);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex)
         {
-            throw new HttpRequestException(
-                "EonaCatDns: " + $"#{response.Header.Id} Error occurred while sending the request.", ex);
+            await Logger.LogAsync(ex, $"Error processing DoH response from '{server}'", false).ConfigureAwait(false);
         }
-
-        return response;
     }
 }

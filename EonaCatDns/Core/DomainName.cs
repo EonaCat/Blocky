@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,10 +61,12 @@ public class DomainName : IEquatable<DomainName>
         }
 
         for (var i = 0; i < labelsCount; i++)
+        {
             if (!LabelsEqual(_labels[i], that._labels[i]))
             {
                 return false;
             }
+        }
 
         return true;
     }
@@ -143,10 +145,12 @@ public class DomainName : IEquatable<DomainName>
         var labelsCount = _labels.Count - 1;
         var domainLabelCount = domain._labels.Count - 1;
         for (; 0 <= domainLabelCount; labelsCount--, domainLabelCount--)
+        {
             if (!LabelsEqual(_labels[labelsCount], domain._labels[domainLabelCount]))
             {
                 return false;
             }
+        }
 
         return true;
     }

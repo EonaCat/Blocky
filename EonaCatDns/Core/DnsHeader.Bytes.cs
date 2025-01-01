@@ -17,15 +17,18 @@ limitations under the License
 
 namespace EonaCat.Dns.Core;
 
-public enum KeyExchangeMode : ushort
+public partial class DnsHeader
 {
-    ServerAssignment = 1,
-
-    DiffieHellman = 2,
-
-    GssApi = 3,
-
-    ResolverAssignment = 4,
-
-    KeyDeletion = 5
+    internal class Bytes
+    {
+        public const byte IsCheckingDisabled = 4;
+        public const byte IsAuthenticatedData = 5;
+        public const byte Zero = 6;
+        public const byte IsRecursionAvailable = 7;
+        public const byte IsRecursionDesired = 8;
+        public const byte IsTruncated = 9;
+        public const byte AuthoritativeAnswer = 10;
+        public const byte OpCode = 11;
+        public const byte MessageType = 15;
+    }
 }

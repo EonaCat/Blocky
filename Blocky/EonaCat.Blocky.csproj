@@ -4,7 +4,7 @@
     <IsPackable>true</IsPackable>
     <LangVersion>Latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyVersion>4.1.6</AssemblyVersion>
+    <AssemblyVersion>4.2.0</AssemblyVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <OutputType>Exe</OutputType>
@@ -40,7 +40,7 @@
   </PropertyGroup>
 
 	<PropertyGroup>
-		<EVRevisionFormat>4.1.6+{chash:10}.{c:ymd}</EVRevisionFormat>
+		<EVRevisionFormat>4.2.0+{chash:10}.{c:ymd}</EVRevisionFormat>
 		<EVDefault>true</EVDefault>
 		<EVInfo>true</EVInfo>
 		<EVTagMatch>v[0-9]*</EVTagMatch>
@@ -87,8 +87,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
-    <PackageReference Include="EonaCat.Logger" Version="1.2.8" />
-    <PackageReference Include="EonaCat.Versioning" Version="1.0.5">
+    <PackageReference Include="EonaCat.Logger" Version="1.3.4" />
+    <PackageReference Include="EonaCat.Versioning" Version="1.2.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

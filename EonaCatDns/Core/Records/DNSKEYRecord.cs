@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -100,7 +100,10 @@ public class DnskeyRecord : ResourceRecord
         var length = key.Length;
         var ac = 0;
 
-        for (var i = 0; i < length; i++) ac += (i & 1) == 1 ? key[i] : key[i] << 8;
+        for (var i = 0; i < length; i++)
+        {
+            ac += (i & 1) == 1 ? key[i] : key[i] << 8;
+        }
 
         ac += (ac >> 16) & 65535;
         return (ushort)(ac & 65535);

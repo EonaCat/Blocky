@@ -74,7 +74,7 @@
             });
             
             $('.addCategory').on("click", function () {
-                var route = '@Url.Action("GetById", "Category")?id=0';
+                var route = '@Url.Action("GetById", "Category?id=-1")';
                 $('#partial').load(route);
             });
         });

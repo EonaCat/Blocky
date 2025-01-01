@@ -6,7 +6,7 @@
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>Latest</LangVersion>
-    <AssemblyVersion>4.1.6</AssemblyVersion>
+    <AssemblyVersion>4.2.0</AssemblyVersion>
     <StartupObject />
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>EonaCat (Jeroen Saey)</Authors>
@@ -28,7 +28,7 @@
   </PropertyGroup>
 
 	<PropertyGroup>
-		<EVRevisionFormat>4.1.6+{chash:10}.{c:ymd}</EVRevisionFormat>
+		<EVRevisionFormat>4.2.0+{chash:10}.{c:ymd}</EVRevisionFormat>
 		<EVDefault>true</EVDefault>
 		<EVInfo>true</EVInfo>
 		<EVTagMatch>v[0-9]*</EVTagMatch>
@@ -155,16 +155,17 @@
     <PackageReference Include="EonaCat.Controls" Version="1.0.2" />
     <PackageReference Include="EonaCat.Extensions.Json" Version="1.0.1" />
     <PackageReference Include="EonaCat.Helpers" Version="1.0.7" />
-    <PackageReference Include="EonaCat.Json" Version="1.0.5" />
-    <PackageReference Include="EonaCat.Logger" Version="1.2.8" />
+    <PackageReference Include="EonaCat.Json" Version="1.0.6" />
+    <PackageReference Include="EonaCat.Logger" Version="1.3.4" />
     <PackageReference Include="EonaCat.Network" Version="1.1.7" />
-    <PackageReference Include="EonaCat.Versioning" Version="1.0.5">
+    <PackageReference Include="EonaCat.Versioning" Version="1.2.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="EonaCat.Versioning.Helpers" Version="1.0.2" />
     <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
-    <PackageReference Include="WebMarkupMin.AspNetCore6" Version="2.16.0" />
+    <PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
+    <PackageReference Include="WebMarkupMin.AspNetCore6" Version="2.18.1" />
     <!--<PackageReference Include="Microsoft.AspNetCore.Cryptography.Internal" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="2.2.0" />-->
   </ItemGroup>

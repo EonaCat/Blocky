@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,12 +23,6 @@ using EonaCat.Json;
 
 namespace EonaCat.Dns.Managers.Stats;
 
-public class StatsLog
-{
-    public string Name { get; set; }
-    public long Value { get; set; }
-}
-
 internal static class StatsDataSetParser
 {
     internal static async Task CreateQueryTypesArrayAsync(JsonTextWriter jsonWriter,
@@ -38,9 +32,9 @@ internal static class StatsDataSetParser
         await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
 
         List<StatsLog> queryTypes = null;
-        if (data != null && data.ContainsKey("queryTypes"))
+        if (data != null && data.TryGetValue("queryTypes", out List<StatsLog> value))
         {
-            queryTypes = data["queryTypes"];
+            queryTypes = value;
         }
 
         await jsonWriter.WritePropertyNameAsync("labels").ConfigureAwait(false);
@@ -88,7 +82,7 @@ internal static class StatsDataSetParser
     internal static async Task CreateLastQueriesArrayAsync(JsonTextWriter jsonWriter,
         IDictionary<string, List<StatsLog>> data)
     {
-        var lastQueries = data != null && data.ContainsKey("lastQueries") ? data["lastQueries"] : null;
+        var lastQueries = data != null && data.TryGetValue("lastQueries", out List<StatsLog> value) ? value : null;
         await jsonWriter.WritePropertyNameAsync("lastQueries").ConfigureAwait(false);
         await jsonWriter.WriteStartArrayAsync().ConfigureAwait(false);
 
@@ -122,7 +116,7 @@ internal static class StatsDataSetParser
     internal static async Task CreateTopBlockedDomainsAsync(JsonTextWriter jsonWriter,
         IDictionary<string, List<StatsLog>> data)
     {
-        var topBlockedDomains = data != null && data.ContainsKey("topBlocked") ? data["topBlocked"] : null;
+        var topBlockedDomains = data != null && data.TryGetValue("topBlocked", out List<StatsLog> value) ? value : null;
         await jsonWriter.WritePropertyNameAsync("topBlocked").ConfigureAwait(false);
         await jsonWriter.WriteStartArrayAsync().ConfigureAwait(false);
 
@@ -156,7 +150,7 @@ internal static class StatsDataSetParser
     internal static async Task CreateTopDomainsAsync(JsonTextWriter jsonWriter,
         IDictionary<string, List<StatsLog>> data)
     {
-        var topDomains = data != null && data.ContainsKey("topDomains") ? data["topDomains"] : null;
+        var topDomains = data != null && data.TryGetValue("topDomains", out List<StatsLog> value) ? value : null;
         await jsonWriter.WritePropertyNameAsync("topDomains").ConfigureAwait(false);
         await jsonWriter.WriteStartArrayAsync().ConfigureAwait(false);
 
@@ -190,7 +184,7 @@ internal static class StatsDataSetParser
     internal static async Task CreateTopClientsArrayAsync(JsonTextWriter jsonWriter,
         IDictionary<string, List<StatsLog>> data)
     {
-        var topClients = data != null && data.ContainsKey("topClients") ? data["topClients"] : null;
+        var topClients = data != null && data.TryGetValue("topClients", out List<StatsLog> value) ? value : null;
         await jsonWriter.WritePropertyNameAsync("topClients").ConfigureAwait(false);
         await jsonWriter.WriteStartArrayAsync().ConfigureAwait(false);
 
@@ -240,19 +234,19 @@ internal static class StatsDataSetParser
             return;
         }
 
-        if (data.ContainsKey("topClients"))
+        if (data.TryGetValue("topClients", out List<StatsLog> topClients))
         {
-            data["topClients"].Clear();
+            topClients.Clear();
         }
 
-        if (data.ContainsKey("topDomains"))
+        if (data.TryGetValue("topDomains", out List<StatsLog> topDomains))
         {
-            data["topDomains"].Clear();
+            topDomains.Clear();
         }
 
-        if (data.ContainsKey("topBlocked"))
+        if (data.TryGetValue("topBlocked", out List<StatsLog> topBlocked))
         {
-            data["topBlocked"].Clear();
+            topBlocked.Clear();
         }
     }
 
@@ -261,9 +255,8 @@ internal static class StatsDataSetParser
     {
         await jsonWriter.WritePropertyNameAsync("statisticsData").ConfigureAwait(false);
         await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
-        var stats = data != null && data.ContainsKey(ConstantsDns.Stats.TotalQueries)
-            ? data[ConstantsDns.Stats.TotalQueries]
-            : null;
+        var stats = data != null && data.TryGetValue(ConstantsDns.Stats.TotalQueries, out List<StatsLog> value)
+            ? value : null;
 
         await jsonWriter.WritePropertyNameAsync("labels").ConfigureAwait(false);
         await jsonWriter.WriteStartArrayAsync().ConfigureAwait(false);
@@ -279,68 +272,60 @@ internal static class StatsDataSetParser
 
         if (data != null)
         {
-            if (data.ContainsKey(ConstantsDns.Stats.TotalQueries))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalQueries, out List<StatsLog> totalQueries))
             {
                 WriteChartDataSet(jsonWriter, "Total Queries",
                     StatsManagerApi.TotalQueriesBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.TotalQueriesBorderColor,
-                    data[ConstantsDns.Stats.TotalQueries]);
+                    StatsManagerApi.TotalQueriesBorderColor, totalQueries);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalNoError))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalNoError, out List<StatsLog> totalNoErrors))
             {
                 WriteChartDataSet(jsonWriter, "No Error",
                     StatsManagerApi.NoErrorBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.NoErrorBorderColor,
-                    data[ConstantsDns.Stats.TotalNoError]);
+                    StatsManagerApi.NoErrorBorderColor, totalNoErrors);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalCached))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalCached, out List<StatsLog> totalCached))
             {
                 WriteChartDataSet(jsonWriter, "Cached",
                     StatsManagerApi.CachedBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.CachedBorderColor,
-                    data[ConstantsDns.Stats.TotalCached]);
+                    StatsManagerApi.CachedBorderColor, totalCached);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalServerFailure))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalServerFailure, out List<StatsLog> totalServerFailure))
             {
                 WriteChartDataSet(jsonWriter, "Server Failure",
                     StatsManagerApi.ServerFailureBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.ServerFailureBorderColor,
-                    data[ConstantsDns.Stats.TotalServerFailure]);
+                    StatsManagerApi.ServerFailureBorderColor, totalServerFailure);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalNameError))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalNameError, out List<StatsLog> totalNameError))
             {
                 WriteChartDataSet(jsonWriter, "Name Error",
                     StatsManagerApi.NameErrorBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.NameErrorBorderColor,
-                    data[ConstantsDns.Stats.TotalNameError]);
+                    StatsManagerApi.NameErrorBorderColor, totalNameError);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalRefused))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalRefused, out List<StatsLog> totalRefused))
             {
                 WriteChartDataSet(jsonWriter, "Refused",
                     StatsManagerApi.RefusedBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.RefusedBorderColor,
-                    data[ConstantsDns.Stats.TotalRefused]);
+                    StatsManagerApi.RefusedBorderColor, totalRefused);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalBlocked))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalBlocked, out List<StatsLog> totalBlocked))
             {
                 WriteChartDataSet(jsonWriter, "Blocked",
                     StatsManagerApi.BlockedBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.BlockedBorderColor,
-                    data[ConstantsDns.Stats.TotalBlocked]);
+                    StatsManagerApi.BlockedBorderColor, totalBlocked);
             }
 
-            if (data.ContainsKey(ConstantsDns.Stats.TotalClients))
+            if (data.TryGetValue(ConstantsDns.Stats.TotalClients, out List<StatsLog> totalClients))
             {
                 WriteChartDataSet(jsonWriter, "Clients",
                     StatsManagerApi.ClientsBackgroundColor + StatsManagerApi.Transparency,
-                    StatsManagerApi.ClientsBorderColor,
-                    data[ConstantsDns.Stats.TotalClients]);
+                    StatsManagerApi.ClientsBorderColor, totalClients);
             }
         }
 
@@ -351,7 +336,7 @@ internal static class StatsDataSetParser
     internal static async Task CreateStatsArrayAsync(JsonTextWriter jsonWriter,
         IDictionary<string, List<StatsLog>> data)
     {
-        var stats = data != null && data.ContainsKey("stats") ? data["stats"] : null;
+        var stats = data != null && data.TryGetValue("stats", out List<StatsLog> value) ? value : null;
         await jsonWriter.WritePropertyNameAsync("stats").ConfigureAwait(false);
         await jsonWriter.WriteStartObjectAsync().ConfigureAwait(false);
 

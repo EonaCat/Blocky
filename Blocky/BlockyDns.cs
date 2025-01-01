@@ -87,10 +87,10 @@ public static class BlockyDns
             var config = new EonaCatDnsConfig
             {
                 LogLevel = Config.Loglevel,
-                ListenAddressV4 = Config.BlockyInteraceV4Ips[0],
+                ListenAddressV4 = Config.BlockyInterfaceV4Ips[0],
                 ResolverAddressV4 = Config.ResolverAddressV4,
                 ForwardersV4 = Config.DnsServers.ToList(),
-                ListenAddressV6 = Config.IsV6Enabled ? Config.BlockyInteraceV6Ips[0] : null,
+                ListenAddressV6 = Config.IsV6Enabled ? Config.BlockyInterfaceV6Ips[0] : null,
                 LogBlockedClients = Config.LogBlockedClients,
                 StatsRefreshInterval = Config.StatsRefreshInterval,
                 IsCacheDisabled = Config.IsCacheDisabled,

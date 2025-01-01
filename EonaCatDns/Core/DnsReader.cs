@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public class DnsReader : DnsStreamBase
     public bool HasOriginalBytes => OriginalBytes?.Length > 0;
     public byte[] OriginalBytes { get; set; }
 
-    private int ReadByteInternal()
+    private byte ReadByteInternal()
     {
         var value = Stream.ReadByte();
         if (value < 0)
@@ -46,13 +46,10 @@ public class DnsReader : DnsStreamBase
         }
 
         Position++;
-        return value;
+        return (byte)value;
     }
 
-    public byte ReadByte()
-    {
-        return (byte)ReadByteInternal();
-    }
+    public byte ReadByte() => ReadByteInternal();
 
     public byte[] ReadBytes(int length)
     {
@@ -61,14 +58,14 @@ public class DnsReader : DnsStreamBase
 
         while (bytesRead < length)
         {
-            var currentByte = Stream.Read(buffer, bytesRead, length - bytesRead);
-            if (currentByte == 0)
+            var currentRead = Stream.Read(buffer, bytesRead, length - bytesRead);
+            if (currentRead == 0)
             {
                 throw new EndOfStreamException("Attempted to read past the end of the stream");
             }
 
-            bytesRead += currentByte;
-            Position += currentByte;
+            bytesRead += currentRead;
+            Position += currentRead;
         }
 
         return buffer;
@@ -86,15 +83,9 @@ public class DnsReader : DnsStreamBase
         return ReadBytes(length);
     }
 
-    public ushort ReadUInt16()
-    {
-        return (ushort)((ReadByte() << 8) | ReadByte());
-    }
+    public ushort ReadUInt16() => (ushort)((ReadByte() << 8) | ReadByte());
 
-    public uint ReadUInt32()
-    {
-        return (uint)((ReadByte() << 24) | (ReadByte() << 16) | (ReadByte() << 8) | ReadByte());
-    }
+    public uint ReadUInt32() => (uint)((ReadByte() << 24) | (ReadByte() << 16) | (ReadByte() << 8) | ReadByte());
 
     public ulong ReadUInt48()
     {
@@ -113,12 +104,16 @@ public class DnsReader : DnsStreamBase
         var pointer = Position;
         var length = ReadByte();
 
-        if ((length & 192) == 192) // Compressed pointer
+        if ((length & 192) == 192) // Compressed pointer (0xC0)
         {
-            var compressedPointer = ((length ^ 192) << 8) | ReadByte();
-            var cname = _names[compressedPointer];
-            _names[pointer] = cname;
-            return cname;
+            var compressedPointer = ((length & 0x3F) << 8) | ReadByte();
+            if (!_names.TryGetValue(compressedPointer, out var cachedLabels))
+            {
+                throw new InvalidDataException($"Invalid pointer reference: {compressedPointer}");
+            }
+
+            _names[pointer] = cachedLabels;
+            return cachedLabels;
         }
 
         var labels = new List<string>();
@@ -138,7 +133,7 @@ public class DnsReader : DnsStreamBase
     public string ReadString()
     {
         var bytes = ReadByteLengthPrefixedBytes();
-        if (bytes.Any(c => c > 127))
+        if (bytes.Any(c => c > 127)) // Ensure only ASCII characters are allowed
         {
             throw new InvalidDataException("EonaCatDns: Only ASCII characters are allowed.");
         }
@@ -172,12 +167,13 @@ public class DnsReader : DnsStreamBase
         for (var i = 0; i < length; i++, offset += 8)
         {
             var bits = ReadByte();
-
             for (var bit = 0; bit < 8; bit++)
+            {
                 if ((bits & (1 << Math.Abs(bit - 7))) != 0)
                 {
                     values.Add((ushort)(offset + bit));
                 }
+            }
         }
 
         return values;
