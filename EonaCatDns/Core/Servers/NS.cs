@@ -69,7 +69,7 @@ namespace EonaCat.Dns.Core.Servers
 
         private async Task QueryQuestionAsync(Question question, Message response, CancellationToken cancel)
         {
-            if (TryGetAnswerFromCache(question.ToString(), out var cachedRecords))
+            if (TryGetAnswerFromCache(question.ToString(), out var cachedRecords) && !Server.WatchMode)
             {
                 response.IsFromCache = true;
                 response.Answers.AddRange(cachedRecords);

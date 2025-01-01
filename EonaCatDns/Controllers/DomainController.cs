@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EonaCat.Dns.Core;
@@ -140,7 +141,7 @@ public class DomainController : ControllerBase
             categoryId = 0;
         }
 
-        var isNew = domain.Id == 0;
+        var isNew = domain.Id < 0;
         var databaseDomain = isNew
             ? new Domain()
             : await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domain.Id).ConfigureAwait(false);
@@ -165,13 +166,19 @@ public class DomainController : ControllerBase
             return RedirectToAction("Index");
         }
 
-        if (!int.TryParse(id, out var domainId) || domainId == 0)
-        {
-            return RedirectToAction("Index");
-        }
+        var isNew = string.IsNullOrEmpty(id) || Convert.ToInt32(id) < 0;
 
-        var model = new DomainViewModel();
-        var domain = await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id == domainId).ConfigureAwait(false);
+        DomainViewModel model = null;
+        Domain domain = null;
+
+        if (!isNew)
+        {
+            if (!int.TryParse(id, out var domainId))
+            {
+                return RedirectToAction("Index");
+            }
+            domain = await DatabaseManager.Domains.FirstOrDefaultAsync(x => x.Id.Equals(domainId)).ConfigureAwait(false);
+        }
 
         if (domain != null)
         {
@@ -184,6 +191,11 @@ public class DomainController : ControllerBase
                 FromBlockList = domain.FromBlockList,
                 Url = domain.Url
             };
+        }
+        else if (isNew)
+        {
+            model = new DomainViewModel();
+            model.Id = -1;
         }
 
         model.Categories = (await DatabaseManager.Categories.GetAll().ToListAsync().ConfigureAwait(false))

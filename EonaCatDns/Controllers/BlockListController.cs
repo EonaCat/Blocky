@@ -226,7 +226,7 @@ public class BlockListController : ControllerBase
         }
 
         _ = long.TryParse(id, out var result);
-        var isNew = result == 0;
+        var isNew = result < 0;
 
         BlockListViewModel model = null;
         var blockList = isNew

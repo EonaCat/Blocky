@@ -162,7 +162,7 @@ public class CategoryController : ControllerBase
         }
 
         _ = int.TryParse(id, out var categoryId);
-        var isNew = categoryId == 0;
+        var isNew = categoryId < 0;
 
         var category = isNew
             ? null

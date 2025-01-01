@@ -133,7 +133,7 @@ limitations under the License
 
         // Add button click event
         $('.addBlockList').on('click', function () {
-            const route = '@Url.Action("GetById", "BlockList")?id=0';
+            const route = '@Url.Action("GetById", "BlockList?id=-1")';
             $('#partial').load(route);
         });
 
