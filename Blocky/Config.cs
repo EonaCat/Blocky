@@ -13,16 +13,16 @@ using Microsoft.Extensions.Configuration;
 namespace EonaCat.Blocky;
 // Blocky
 // Blocking domains the way you want it.
-// Copyright EonaCat (Jeroen Saey) 2017-2023
+// Copyright EonaCat (Jeroen Saey) 2017-2025
 // https://blocky.EonaCat.com
 
 public static class Config
 {
     public static IConfiguration Configuration = AppInfo.Configuration.GetSection("Blocky");
 
-    public static string[] BlockyInteraceV4Ips = Configuration.GetValue("ListenV4", "127.0.0.1").Split(",");
+    public static string[] BlockyInterfaceV4Ips = Configuration.GetValue("ListenV4", "127.0.0.1").Split(",");
     public static string ResolverAddressV4 = Configuration.GetValue("ResolveV4", "127.0.0.1");
-    public static string[] BlockyInteraceV6Ips = Configuration.GetValue("LocalV6", "::1").Split(",");
+    public static string[] BlockyInterfaceV6Ips = Configuration.GetValue("LocalV6", "::1").Split(",");
     public static string ResolverAddressV6 = Configuration.GetValue("ResolveV6", "::1");
     public static bool IsV6Enabled = Configuration.GetValue("IsV6enabled", true);
     public static bool IsCacheDisabled = Configuration.GetValue("IsCacheDisabled", false);
@@ -33,7 +33,7 @@ public static class Config
 
     public static bool AutoUpdate = Configuration.GetValue("AutoUpdate", true);
 
-    public static string WebserverInteraceIp = Configuration.GetValue("WebInterface", BlockyInteraceV4Ips[0]);
+    public static string WebserverInteraceIp = Configuration.GetValue("WebInterface", BlockyInterfaceV4Ips[0]);
     public static bool HideVersion = Configuration.GetValue("HideVersion", false);
 
     public static string BlockyRedirectionserver = string.Empty;

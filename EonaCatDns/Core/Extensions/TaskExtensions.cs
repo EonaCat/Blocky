@@ -16,11 +16,22 @@ limitations under the License
 */
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace EonaCat.Dns.Core.Records;
-
-[Flags]
-public enum Nsec3Flags : byte
+public static class TaskExtensions
 {
-    OptOut = 1
+    public static async Task WithCancellation(this Task task, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        using (cancellationToken.Register(s => ((TaskCompletionSource<bool>)s).TrySetResult(true), tcs))
+        {
+            if (task != await Task.WhenAny(task, tcs.Task).ConfigureAwait(false))
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+        }
+
+        await task.ConfigureAwait(false);
+    }
 }

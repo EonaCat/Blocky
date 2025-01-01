@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -93,7 +93,10 @@ public class ExceptionHandlingMiddleware
 
         var codeValuesLength = codeValues.Length;
 
-        for (var i = 0; i < errorCodeLength; i++) stringBuilder.Append(codeValues[traceBytes[i] % codeValuesLength]);
+        for (var i = 0; i < errorCodeLength; i++)
+        {
+            stringBuilder.Append(codeValues[traceBytes[i] % codeValuesLength]);
+        }
 
         return stringBuilder.ToString();
     }

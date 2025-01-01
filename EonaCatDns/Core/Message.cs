@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ namespace EonaCat.Dns.Core;
 
 public class Message : RecordBase
 {
-    internal DnsHeader.Bytes Bytes { get; } = new();
     public DnsHeader Header { get; set; } = new();
     public List<Question> Questions { get; } = new();
     public List<ResourceRecord> Answers { get; set; } = new();
@@ -69,7 +68,7 @@ public class Message : RecordBase
                 AdditionalRecords.Add(optRecord);
             }
 
-            Header.Opcode4 = (byte)(extendedOpCode & Bytes.MessageTypeByte);
+            Header.Opcode4 = (byte)(extendedOpCode & DnsHeader.Bytes.MessageType);
             optRecord.Opcode8 = (byte)((extendedOpCode >> 4) & 255);
         }
     }
@@ -181,12 +180,17 @@ public class Message : RecordBase
     private static async Task ReadRecords(DnsReader reader, int count, List<ResourceRecord> records)
     {
         for (var i = 0; i < count; i++)
+        {
             records.Add((ResourceRecord)await new ResourceRecord().Read(reader).ConfigureAwait(false));
+        }
     }
 
     private static async Task ReadRecords(DnsReader reader, int count, List<Question> records)
     {
-        for (var i = 0; i < count; i++) records.Add((Question)await new Question().Read(reader).ConfigureAwait(false));
+        for (var i = 0; i < count; i++)
+        {
+            records.Add((Question)await new Question().Read(reader).ConfigureAwait(false));
+        }
     }
 
     private OptRecord GetOptRecord()
@@ -215,16 +219,16 @@ public class Message : RecordBase
             header.AuthorityCount = reader.ReadUInt16();
             header.AdditionalRecordsCount = reader.ReadUInt16();
 
-            header.MessageType = (MessageType)(flags >> Bytes.MessageTypeByte);
-            header.AuthoritativeAnswer = (AuthoritativeAnswer)((flags >> Bytes.AuthoritativeAnswerByte) & 1);
-            header.IsTruncated = ((flags >> Bytes.IsTruncatedByte) & 1) == 1;
-            header.IsRecursionDesired = ((flags >> Bytes.IsRecursionDesiredByte) & 1) == 1;
-            header.IsRecursionAvailable = ((flags >> Bytes.IsRecursionAvailableByte) & 1) == 1;
-            header.Opcode4 = (byte)((flags >> Bytes.OpCodeByte) & Bytes.MessageTypeByte);
-            header.Zero = (flags >> Bytes.ZeroByte) & 1;
-            header.IsAuthenticatedData = ((flags >> Bytes.IsAuthenticatedDataByte) & 1) == 1;
-            header.IsCheckingDisabled = ((flags >> Bytes.IsCheckingDisabledByte) & 1) == 1;
-            header.ResponseCode = (ResponseCode)(flags & Bytes.MessageTypeByte);
+            header.MessageType = (MessageType)(flags >> DnsHeader.Bytes.MessageType);
+            header.AuthoritativeAnswer = (AuthoritativeAnswer)((flags >> DnsHeader.Bytes.AuthoritativeAnswer) & 1);
+            header.IsTruncated = ((flags >> DnsHeader.Bytes.IsTruncated) & 1) == 1;
+            header.IsRecursionDesired = ((flags >> DnsHeader.Bytes.IsRecursionDesired) & 1) == 1;
+            header.IsRecursionAvailable = ((flags >> DnsHeader.Bytes.IsRecursionAvailable) & 1) == 1;
+            header.Opcode4 = (byte)((flags >> DnsHeader.Bytes.OpCode) & DnsHeader.Bytes.MessageType);
+            header.Zero = (flags >> DnsHeader.Bytes.Zero) & 1;
+            header.IsAuthenticatedData = ((flags >> DnsHeader.Bytes.IsAuthenticatedData) & 1) == 1;
+            header.IsCheckingDisabled = ((flags >> DnsHeader.Bytes.IsCheckingDisabled) & 1) == 1;
+            header.ResponseCode = (ResponseCode)(flags & DnsHeader.Bytes.MessageType);
         }
         catch (Exception exception)
         {
@@ -246,16 +250,16 @@ public class Message : RecordBase
     {
         writer.WriteUInt16(Header.Id);
         ushort flags = 0;
-        flags |= (ushort)((ushort)Header.MessageType << Bytes.MessageTypeByte);
-        flags |= (ushort)((ushort)Header.AuthoritativeAnswer << Bytes.AuthoritativeAnswerByte);
-        flags |= (ushort)(Convert.ToUInt16(Header.IsTruncated) << Bytes.IsTruncatedByte);
-        flags |= (ushort)(Convert.ToUInt16(Header.IsRecursionDesired) << Bytes.IsRecursionDesiredByte);
-        flags |= (ushort)(Convert.ToUInt16(Header.IsRecursionAvailable) << Bytes.IsRecursionAvailableByte);
-        flags |= (ushort)((Header.Opcode4 & Bytes.MessageTypeByte) << Bytes.OpCodeByte);
-        flags |= (ushort)(((ushort)Header.Zero & 1) << Bytes.ZeroByte);
-        flags |= (ushort)(Convert.ToUInt16(Header.IsAuthenticatedData) << Bytes.IsAuthenticatedDataByte);
-        flags |= (ushort)(Convert.ToUInt16(Header.IsCheckingDisabled) << Bytes.IsCheckingDisabledByte);
-        flags |= (ushort)(Convert.ToUInt16(Header.ResponseCode) & Bytes.MessageTypeByte);
+        flags |= (ushort)((ushort)Header.MessageType << DnsHeader.Bytes.MessageType);
+        flags |= (ushort)((ushort)Header.AuthoritativeAnswer << DnsHeader.Bytes.AuthoritativeAnswer);
+        flags |= (ushort)(Convert.ToUInt16(Header.IsTruncated) << DnsHeader.Bytes.IsTruncated);
+        flags |= (ushort)(Convert.ToUInt16(Header.IsRecursionDesired) << DnsHeader.Bytes.IsRecursionDesired);
+        flags |= (ushort)(Convert.ToUInt16(Header.IsRecursionAvailable) << DnsHeader.Bytes.IsRecursionAvailable);
+        flags |= (ushort)((Header.Opcode4 & DnsHeader.Bytes.MessageType) << DnsHeader.Bytes.OpCode);
+        flags |= (ushort)(((ushort)Header.Zero & 1) << DnsHeader.Bytes.Zero);
+        flags |= (ushort)(Convert.ToUInt16(Header.IsAuthenticatedData) << DnsHeader.Bytes.IsAuthenticatedData);
+        flags |= (ushort)(Convert.ToUInt16(Header.IsCheckingDisabled) << DnsHeader.Bytes.IsCheckingDisabled);
+        flags |= (ushort)(Convert.ToUInt16(Header.ResponseCode) & DnsHeader.Bytes.MessageType);
         writer.WriteUInt16(flags);
         writer.WriteUInt16((ushort)Questions.Count);
         writer.WriteUInt16((ushort)Answers.Count);
@@ -292,7 +296,7 @@ public class Message : RecordBase
         return stringBuilder.ToString();
     }
 
-    private void ToString(StringBuilder stringBuilder, DnsHeader header)
+    private static void ToString(StringBuilder stringBuilder, DnsHeader header)
     {
         stringBuilder.AppendLine("======");
         stringBuilder.AppendLine("Header");

@@ -74,7 +74,7 @@ internal static class ResolveHelper
         var dnsClient = new DnsClient
         {
             Servers = isLookupTool
-                ? new[] { IPAddress.Parse("8.8.8.8") }
+                ? [IPAddress.Parse("8.8.8.8")]
                 : Config.ForwardersV4.Union(Config.ForwardersV6).Select(IPAddress.Parse)
         };
 

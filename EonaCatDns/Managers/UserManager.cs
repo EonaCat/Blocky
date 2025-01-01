@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ internal class UserManager
     private ConcurrentDictionary<string, User> Credentials { get; } = new();
     internal ConcurrentDictionary<string, User> Users => Credentials;
 
-    internal string GetPasswordHash(string username, string password)
+    internal static string GetPasswordHash(string username, string password)
     {
         using HMAC hmac = new HMACSHA512(Encoding.UTF8.GetBytes(password));
         return BitConverter.ToString(hmac.ComputeHash(Encoding.UTF8.GetBytes(username))).Replace("-", "").ToLower();

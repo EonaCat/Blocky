@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -101,10 +101,12 @@ public static class Base16Converter
 
         var isLowerCase = true;
         for (var i = offset; i < offset + count; i++)
+        {
             if (base16String[i] >= 'A' && base16String[i] <= 'F')
             {
                 isLowerCase = false;
             }
+        }
 
         return (isLowerCase ? BaseEncoding.Base16LowerCase : BaseEncoding.Base16UpperCase).GetBytes(base16String,
             offset, count);

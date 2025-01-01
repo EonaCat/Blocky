@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -87,16 +87,16 @@ public class EonaCatDnsWebServer
             return;
         }
 
-        await EonaCatDns.Managers.WriteToLog("Starting adminPanel.").ConfigureAwait(false);
-        Task.Run(() => _builder.RunAsync());
+        await Managers.Managers.WriteToLog("Starting adminPanel.").ConfigureAwait(false);
+        _ = Task.Run(() => _builder.RunAsync());
         IsRunning = true;
-        await EonaCatDns.Managers.WriteToLog("AdminPanel was started successfully.").ConfigureAwait(false);
+        await Managers.Managers.WriteToLog("AdminPanel was started successfully.").ConfigureAwait(false);
     }
 
     public async Task StopAsync()
     {
         await _builder.StopAsync().ConfigureAwait(false);
         IsRunning = false;
-        await EonaCatDns.Managers.WriteToLog("AdminPanel was stopped successfully.").ConfigureAwait(false);
+        await Managers.Managers.WriteToLog("AdminPanel was stopped successfully.").ConfigureAwait(false);
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ using System.IO;
 
 namespace EonaCat.Dns.Core;
 
-public class DnsHeader
+public partial class DnsHeader
 {
     public const int HeaderSize = 12;
     public byte Opcode4;
@@ -101,18 +101,5 @@ public class DnsHeader
         stringWriter.WriteLine();
 
         return stringWriter.ToString();
-    }
-
-    internal class Bytes
-    {
-        public int IsCheckingDisabledByte => 4;
-        public int IsAuthenticatedDataByte => 5;
-        public int ZeroByte => 6;
-        public int IsRecursionAvailableByte => 7;
-        public int IsRecursionDesiredByte => 8;
-        public int IsTruncatedByte => 9;
-        public int AuthoritativeAnswerByte => 10;
-        public int OpCodeByte => 11;
-        public int MessageTypeByte => 15;
     }
 }

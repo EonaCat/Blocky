@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@ limitations under the License
 */
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -30,287 +28,171 @@ using System.Threading.Tasks;
 using EonaCat.Dns.Core;
 using EonaCat.Dns.Database;
 using EonaCat.Dns.Database.Models.Entities;
-using EonaCat.Dns.Helpers;
-using EonaCat.Dns.Models;
 using EonaCat.Helpers.Helpers;
 using EonaCat.Logger;
 using BlockList = EonaCat.Dns.Database.Models.Entities.BlockList;
 
-namespace EonaCat.Dns;
-
-public class BlockListDownloadTask
+namespace EonaCat.Dns
 {
-    private const int FILE_PARSING_WAIT_IN_MILLISECONDS = 1;
-    public bool ProgressToConsole { get; set; }
-
-    public async Task GenerateDownloadTaskAsync(string address, string blockListsFolder, BlockList blockList,
-        bool progressToConsole = false)
+    public class BlockListDownloadTask
     {
-        ProgressToConsole = progressToConsole;
-        var blockListFileName = GetBlockListFileName(blockList.Url);
-        var blockListFilePath = Path.Combine(blockListsFolder, blockListFileName);
-        var blockListDownloadFilePath = blockListFilePath + ".downloading";
-
-        try
+        /// <summary>
+        /// Generate the download task
+        /// </summary>
+        /// <param name="blockListsFolder"></param>
+        /// <param name="blockList"></param>
+        /// <param name="progressToConsole"></param>
+        /// <returns></returns>
+        public async Task GenerateDownloadTaskAsync(string blockListsFolder, BlockList blockList, bool progressToConsole = false)
         {
-            await Logger.LogAsync($"Downloading file for {blockList.Url}", ELogType.DEBUG);
-            await WebHelper.DownloadFile(new Uri(blockList.Url), blockListDownloadFilePath);
-            await Logger.LogAsync($"File downloaded for {blockList.Url}", ELogType.DEBUG);
+            var blockListFileName = GetBlockListFileName(blockList.Url);
+            var blockListFilePath = Path.Combine(blockListsFolder, blockListFileName);
 
-            if (!File.Exists(blockListDownloadFilePath))
+            try
             {
-                await Logger.LogAsync("BlockList download path doesn't exist", ELogType.ERROR);
-                return;
-            }
+                await Logger.LogAsync($"Downloading file for {blockList.Url}", ELogType.DEBUG).ConfigureAwait(false);
+                await WebHelper.DownloadFile(new Uri(blockList.Url), blockListFilePath + ".downloading").ConfigureAwait(false);
+                await Logger.LogAsync($"File downloaded for {blockList.Url}", ELogType.DEBUG).ConfigureAwait(false);
 
-            File.Move(blockListDownloadFilePath, blockListFilePath, true);
-            await ProcessBlockList(blockList, blockListFilePath);
-        }
-        catch (Exception ex)
-        {
-            await Logger.LogAsync($"Failed to download or process block list from {blockList.Url}: {ex.Message}",
-                ELogType.ERROR);
-        }
-    }
-
-    private async Task ProcessBlockList(BlockList blockList, string blockListFilePath)
-    {
-        // Read all the lines from the file
-        await Task.Run(async () =>
-        {
-            var fileContents = await ReadLinesFromFileAsync(blockListFilePath);
-            if (fileContents != null)
-            {
-                blockList.LastUpdateStartTime = DateTime.Now.ToString(CultureInfo.InvariantCulture);
-                blockList.TotalEntries = fileContents.TotalLines;
-                blockList = await DatabaseManager.BlockLists.InsertOrUpdateAsync(blockList);
-                await ParseBlockListFileAsync(new Uri(blockList.Url), blockListFilePath, fileContents);
-            }
-        }).ConfigureAwait(false);
-    }
-
-    private static async Task<FileContents> ReadLinesFromFileAsync(string path)
-    {
-        var lines = new ConcurrentBag<string>();
-        var watch = Stopwatch.StartNew();
-
-        try
-        {
-            using (var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
-            using (var reader = new StreamReader(fileStream))
-            {
-                while (await reader.ReadLineAsync() is { } line)
-                    if (!string.IsNullOrWhiteSpace(line))
-                    {
-                        lines.Add(line);
-                    }
-            }
-        }
-        catch (Exception exception)
-        {
-            await Logger.LogAsync($"Error reading file '{path}': {exception.Message}", ELogType.ERROR);
-            return null;
-        }
-
-        watch.Stop();
-        var elapsedMs = watch.ElapsedMilliseconds;
-
-        return new FileContents
-        {
-            Lines = lines.ToList(),
-            ElapsedMilliSeconds = elapsedMs,
-            Path = path,
-            TotalLines = lines.Count
-        };
-    }
-
-    private static string GetBlockListFileName(string url)
-    {
-        return BitConverter
-            .ToString(SHA256.HashData(Encoding.UTF8.GetBytes(url)))
-            .Replace("-", "")
-            .ToLower();
-    }
-
-    private static async Task SaveDomainsToDatabase(string blockListUrl, List<string> domains)
-    {
-        if (domains.Count == 0)
-        {
-            return;
-        }
-
-        var address = ConstantsDns.DefaultRedirectionAddress;
-        var domainList = domains.Select(domain => new Domain
-        {
-            Url = domain,
-            ForwardIp = address,
-            ListType = ListType.Blocked,
-            FromBlockList = blockListUrl
-        }).ToList();
-
-        try
-        {
-            await Task.Run(async () =>
-            {
-                var count = await DatabaseManager.Domains.BulkInsertOrUpdateAsync(domainList).ConfigureAwait(false);
-                await Logger.LogAsync($"{count} domain entries saved to database", ELogType.DEBUG)
-                    .ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            await Logger.LogAsync($"Failed to save domain entries to database: {ex.Message}", ELogType.ERROR)
-                .ConfigureAwait(false);
-        }
-    }
-
-    private async Task ParseBlockListFileAsync(Uri blockListUrl, string blockListFilePath, FileContents fileContents)
-    {
-        var domains = new ConcurrentBag<string>();
-
-        // Remove domains from blocklist asynchronously
-        await DatabaseManager.Domains.Where(x => x.FromBlockList == blockListUrl.AbsoluteUri).DeleteAsync()
-            .ConfigureAwait(false);
-
-        try
-        {
-            using (new PerformanceTimer($"{blockListUrl.AbsoluteUri} retrieval"))
-            {
-                fileContents.Status = "OK";
-
-                var task = Blocker.RunningBlockerTasks.FirstOrDefault(
-                    x => x.Uri.AbsoluteUri == blockListUrl.AbsoluteUri);
-                if (task == null)
+                if (!File.Exists(blockListFilePath + ".downloading"))
                 {
-                    fileContents.Status = "Invalid blockList task";
+                    await Logger.LogAsync("BlockList download path doesn't exist", ELogType.ERROR).ConfigureAwait(false);
                     return;
                 }
 
-                var tasks = fileContents.Lines
-                    .Select(async (line, index) =>
-                    {
-                        if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#", StringComparison.Ordinal))
-                        {
-                            await ReportProgressAsync(blockListUrl, index + 1, fileContents.TotalLines, task)
-                                .ConfigureAwait(false);
-                            return;
-                        }
-
-                        line = line.TrimStart(' ', '\t').TrimEnd();
-
-                        var firstWord = PopWord(ref line);
-                        var secondWord = PopWord(ref line);
-
-                        string ipAddress = null;
-                        string hostname;
-
-                        if (!IPAddress.TryParse(firstWord, out var _))
-                        {
-                            hostname = firstWord;
-                            ipAddress = secondWord;
-                        }
-                        else
-                        {
-                            ipAddress = firstWord;
-                            hostname = secondWord;
-                        }
-
-                        if (string.IsNullOrWhiteSpace(hostname))
-                        {
-                            hostname = firstWord;
-                        }
-
-                        if (string.IsNullOrWhiteSpace(hostname) || Blocker.AllowList.Contains(hostname))
-                        {
-                            await ReportProgressAsync(blockListUrl, index + 1, fileContents.TotalLines, task)
-                                .ConfigureAwait(false);
-                            return;
-                        }
-
-                        domains.Add(hostname);
-                        await ReportProgressAsync(blockListUrl, index + 1, fileContents.TotalLines, task)
-                            .ConfigureAwait(false);
-                        await Task.Delay(FILE_PARSING_WAIT_IN_MILLISECONDS).ConfigureAwait(false);
-                    });
-
-                await Task.WhenAll(tasks);
-
-                if (fileContents.Status == "OK")
-                {
-                    await Logger.LogAsync($"Parsed file for {blockListUrl.AbsoluteUri}", ELogType.DEBUG)
-                        .ConfigureAwait(false);
-
-                    await Task.Run(async () =>
-                    {
-                        await SaveDomainsToDatabase(blockListUrl.AbsoluteUri, domains.ToList()).ConfigureAwait(false);
-                        await Logger.LogAsync("DNS Server Blocked zone was updated from: " + blockListFilePath,
-                                ELogType.DEBUG)
-                            .ConfigureAwait(false);
-                    }).ConfigureAwait(false);
-                }
-                else
-                {
-                    await Logger.LogAsync($"Failed to parse file for {blockListUrl.AbsoluteUri}", ELogType.ERROR)
-                        .ConfigureAwait(false);
-                    await Logger.LogAsync($"Reason: {fileContents.Status}", ELogType.ERROR).ConfigureAwait(false);
-                }
+                File.Move(blockListFilePath + ".downloading", blockListFilePath, true);
+                await ProcessBlockListAsync(blockList, blockListFilePath, progressToConsole).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await Logger.LogAsync($"Failed to download or process block list from {blockList.Url}: {ex.Message}", ELogType.ERROR).ConfigureAwait(false);
             }
         }
-        catch (Exception ex)
-        {
-            await Logger.LogAsync("DNS Server failed to update block list from: " + blockListUrl.AbsoluteUri + " : " +
-                                  blockListFilePath +
-                                  "\r\n" + ex.Message, ELogType.ERROR).ConfigureAwait(false);
-            fileContents.Status = "ERROR";
-        }
-    }
 
-    private async Task ReportProgressAsync(Uri blockListUrl, int currentItemIndex, int totalItems, TaskItem task)
-    {
-        var currentProgress = Blocker.GetProgress(currentItemIndex, totalItems);
-        task.Progress = currentProgress;
-        task.Current = currentItemIndex;
-        task.Total = totalItems;
-        task.Uri = blockListUrl;
-        task.Status = string.Empty;
-
-        if (ProgressToConsole)
+        private static async Task<int> CountTotalLinesAsync(string filePath)
         {
-            await Logger
-                .LogAsync($"{currentItemIndex}: {currentProgress}% ({currentItemIndex}/{totalItems}) - {blockListUrl}",
-                    ELogType.TRAFFIC).ConfigureAwait(false);
-        }
-    }
+            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
+            using var reader = new StreamReader(fileStream);
 
-    private static string PopWord(ref string line)
-    {
-        if (line == "")
-        {
-            return line;
+            int totalLines = 0;
+            while (await reader.ReadLineAsync() is not null)
+            {
+                totalLines++;
+            }
+
+            return totalLines;
         }
 
-        line = line.TrimStart(' ', '\t');
-
-        var i = line.IndexOf(' ');
-
-        if (i < 0)
+        private static async Task ProcessBlockListAsync(BlockList blockList, string blockListFilePath, bool progressToConsole)
         {
-            i = line.IndexOf('\t');
+            var domains = new List<string>();
+
+            try
+            {
+                using var fileStream = new FileStream(blockListFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
+                using var reader = new StreamReader(fileStream);
+
+                var tasks = new List<Task>();
+
+                int totalNumberOfLines = await CountTotalLinesAsync(blockListFilePath).ConfigureAwait(false);
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    tasks.Add(ParseLineAsync(line, domains, blockList.Url, progressToConsole, totalNumberOfLines));
+                }
+
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex)
+            {
+                await Logger.LogAsync($"DNS Server failed to update block list from: {blockList.Url} : {blockListFilePath}\r\n{ex.Message}", ELogType.ERROR);
+            }
+
+            // Update block list and save domains to the database
+            await UpdateBlockListAndSaveToDatabase(blockList, domains);
         }
 
-        string word;
-
-        if (i < 0)
+        private static async Task ParseLineAsync(string line, List<string> domains, string blockListUrl, bool progressToConsole, int totalNumberOfLines)
         {
-            word = line;
-            line = "";
-        }
-        else
-        {
-            word = line.Substring(0, i);
-            line = line.Substring(i + 1);
+            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+                return;
+
+            line = line.Trim();
+
+            var words = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length < 2)
+                return;
+
+            var hostname = words[0];
+            var ipAddress = words[1];
+
+            if (IPAddress.TryParse(hostname, out _))
+            {
+                // Swap if the first word is an IP address
+                var temp = hostname;
+                hostname = ipAddress;
+                ipAddress = temp;
+            }
+
+            if (string.IsNullOrWhiteSpace(hostname) || Blocker.AllowList.Contains(hostname))
+                return;
+
+            domains.Add(hostname);
+
+            if (progressToConsole)
+            {
+                await ReportProgressAsync(new Uri(blockListUrl), domains.Count, totalNumberOfLines);
+            }
         }
 
-        return word;
+        private static async Task ReportProgressAsync(Uri blockListUrl, int currentItemIndex, int totalItems)
+        {
+            double progressPercentage = (double)currentItemIndex / totalItems * 100;
+            await Logger.LogAsync($"{progressPercentage:F2}% ({currentItemIndex}/{totalItems}) - {blockListUrl}", ELogType.TRAFFIC);
+        }
+
+        private static async Task UpdateBlockListAndSaveToDatabase(BlockList blockList, List<string> domains)
+        {
+            try
+            {
+                if (domains.Count == 0)
+                    return;
+
+                blockList.LastUpdateStartTime = DateTime.Now.ToString(CultureInfo.InvariantCulture);
+                blockList.TotalEntries = domains.Count;
+                blockList = await DatabaseManager.BlockLists.InsertOrUpdateAsync(blockList);
+
+                await SaveDomainsToDatabase(blockList.Url, domains);
+                await Logger.LogAsync("DNS Server Blocked zone was updated from: " + blockList.Url, ELogType.DEBUG);
+            }
+            catch (Exception ex)
+            {
+                await Logger.LogAsync($"Failed to update block list and save domains to database: {ex.Message}", ELogType.ERROR);
+            }
+        }
+
+        private static async Task SaveDomainsToDatabase(string blockListUrl, List<string> domains)
+        {
+            var address = ConstantsDns.DefaultRedirectionAddress;
+            var domainList = domains.Select(domain => new Domain
+            {
+                Url = domain,
+                ForwardIp = address,
+                ListType = ListType.Blocked,
+                FromBlockList = blockListUrl
+            }).ToList();
+
+            var count = await DatabaseManager.Domains.BulkInsertOrUpdateAsync(domainList);
+            await Logger.LogAsync($"{count.Count()} domain entries saved to database", ELogType.DEBUG);
+        }
+
+
+        private static string GetBlockListFileName(string url)
+        {
+            return BitConverter
+                .ToString(SHA256.HashData(Encoding.UTF8.GetBytes(url)))
+                .Replace("-", "")
+                .ToLower();
+        }
     }
 }

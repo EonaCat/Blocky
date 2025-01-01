@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ namespace EonaCat.Dns;
 
 public static class Logger
 {
+    private const int BUFFER_SIZE = 4096;
+
     public static bool UseLocalTime { get; set; }
     public static ELogType MaxLogType { get; set; } = ELogType.DEBUG;
     public static string LogFolder => DllInfo.LogFolder;
@@ -56,7 +58,7 @@ public static class Logger
             await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
             // Read initial file contents and send it to the response
-            var buffer = new byte[4096];
+            var buffer = new byte[BUFFER_SIZE];
             int bytesRead;
             while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
                 if (!responseCompleted)

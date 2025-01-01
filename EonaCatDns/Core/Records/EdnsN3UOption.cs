@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,7 +40,10 @@ public class EdnsN3UOption : EdnsOptionBase
     public override void ReadData(DnsReader reader, int length)
     {
         Algorithms.Clear();
-        for (; length > 0; length--) Algorithms.Add((DigestType)reader.ReadByte());
+        for (; length > 0; length--)
+        {
+            Algorithms.Add((DigestType)reader.ReadByte());
+        }
     }
 
     public override void WriteData(DnsWriter writer)

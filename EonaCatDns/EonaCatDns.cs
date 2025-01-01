@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -124,8 +124,15 @@ public class EonaCatDns : IDisposable
         Dispose(true);
     }
 
+    /// <summary>
+    /// Event is invoked when the setup has been updated
+    /// </summary>
     public event EventHandler OnUpdateSetup;
 
+    /// <summary>
+    ///  Catch all the unhandled and firstChance Exceptions
+    /// </summary>
+    /// <returns></returns>
     public EonaCatDns UseExceptionHandling()
     {
         AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
@@ -158,6 +165,10 @@ public class EonaCatDns : IDisposable
         ConstantsDns.Stats.RefreshInterval = _config.StatsRefreshInterval;
     }
 
+    /// <summary>
+    /// Get the stats as an overview
+    /// </summary>
+    /// <returns></returns>
     public async Task<StatsOverview> GetStatsOverviewAsync()
     {
         return await DatabaseManager.GetStatsOverviewAsync().ConfigureAwait(false);
@@ -357,7 +368,7 @@ public class EonaCatDns : IDisposable
             await Logger.LogAsync(databaseException.Message);
 
             IsFirstTime = true;
-            await _blocker.WriteDefaultAllowListAsync().ConfigureAwait(false);
+            await Blocker.WriteDefaultAllowListAsync().ConfigureAwait(false);
 
             if (settingsAmount == 0)
             {
@@ -377,7 +388,7 @@ public class EonaCatDns : IDisposable
             { Name = SettingName.WebservicePort, Value = WebServicePort.ToString() }).ConfigureAwait(false);
     }
 
-    internal async Task SaveSettingsAsync()
+    private static async Task SaveSettingsAsync()
     {
         var setting = await DatabaseManager.GetSettingAsync(SettingName.WebservicePort).ConfigureAwait(false);
         setting.Value = WebServicePort.ToString();
@@ -398,6 +409,12 @@ public class EonaCatDns : IDisposable
         DatabaseManager.AddUserAsync(x);
     }
 
+    /// <summary>
+    /// Add blocked entries
+    /// </summary>
+    /// <param name="blockedList"></param>
+    /// <param name="address"></param>
+    /// <returns></returns>
     public async Task AddBlockedEntriesAsync(HashSet<BlockList> blockedList,
         string address = null)
     {

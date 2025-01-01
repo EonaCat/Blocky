@@ -84,32 +84,38 @@ public class DomainController : ControllerBase
         switch (sortColumn)
         {
             case 0:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.Id).ToList()
                     : result.OrderByDescending(x => x.Id).ToList();
                 break;
             case 1:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.Url).ToList()
                     : result.OrderByDescending(x => x.Url).ToList();
                 break;
             case 2:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.ForwardIp).ToList()
                     : result.OrderByDescending(x => x.ForwardIp).ToList();
                 break;
             case 3:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.FromBlockList).ToList()
                     : result.OrderByDescending(x => x.FromBlockList).ToList();
                 break;
             case 4:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.ListType).ToList()
                     : result.OrderByDescending(x => x.ListType).ToList();
                 break;
             case 5:
-                result = sortDirection.ToUpper() == "ASC"
+                result = sortDirection.Equals("ASC"
+, System.StringComparison.CurrentCultureIgnoreCase)
                     ? result.OrderBy(x => x.Category).ToList()
                     : result.OrderByDescending(x => x.Category).ToList();
                 break;

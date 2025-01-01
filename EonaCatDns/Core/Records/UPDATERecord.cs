@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -71,7 +71,10 @@ public class UpdateRecord : RecordBase
         var requirementCount = reader.ReadUInt16();
         var updateCount = reader.ReadUInt16();
         var additionalResourcesCount = reader.ReadUInt16();
-        for (var i = 0; i < zoneCount; i++) Zone = (Question)await new Question().Read(reader).ConfigureAwait(false);
+        for (var i = 0; i < zoneCount; i++)
+        {
+            Zone = (Question)await new Question().Read(reader).ConfigureAwait(false);
+        }
 
         for (var i = 0; i < requirementCount; i++)
         {

@@ -1,6 +1,6 @@
 ﻿/*
 EonaCatDns
-Copyright (C) 2017-2023 EonaCat (Jeroen Saey)
+Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -89,17 +89,17 @@ internal class Managers
         return SessionManager.IsSessionValid(token);
     }
 
-    internal async Task WriteToLog(Exception exception, bool writeToConsole = true)
+    internal static async Task WriteToLog(Exception exception, bool writeToConsole = true)
     {
         await Logger.LogAsync(exception, string.Empty, writeToConsole);
     }
 
-    internal async Task WriteToLog(string message, bool writeToConsole = true)
+    internal static async Task WriteToLog(string message, bool writeToConsole = true)
     {
         await Logger.LogAsync(message, writeToConsole: writeToConsole);
     }
 
-    internal void ApiListLogs(JsonTextWriter jsonWriter)
+    internal static void ApiListLogs(JsonTextWriter jsonWriter)
     {
         var logFiles = Directory.GetFiles(DllInfo.LogFolder, "*.log");
 
@@ -151,7 +151,7 @@ internal class Managers
         await Logger.LogAsync("Log file was deleted: " + log);
     }
 
-    internal async Task ApiLogs(HttpResponse response, string logFileName)
+    internal static async Task ApiLogs(HttpResponse response, string logFileName)
     {
         try
         {
