@@ -97,12 +97,20 @@ internal static class DatabaseManager
         await Database.CreateTableAsync<User>().ConfigureAwait(false);
 
         await Database.CreateIndexAsync<Category>(x => x.Name).ConfigureAwait(false);
+        
         await Database.CreateIndexAsync<Client>(x => x.Name).ConfigureAwait(false);
         await Database.CreateIndexAsync<Client>(x => x.Ip).ConfigureAwait(false);
+
         await DatabaseDomain.CreateIndexAsync<Domain>(x => x.Url).ConfigureAwait(false);
         await DatabaseDomain.CreateIndexAsync<Domain>(x => x.ListType).ConfigureAwait(false);
+
+        //await DatabaseDomain.CreateIndexAsync<Domain>(x => new { x.Url, x.ListType }).ConfigureAwait(false);
+
         await DatabaseLogs.CreateIndexAsync<Log>(x => x.ClientIp).ConfigureAwait(false);
         await DatabaseLogs.CreateIndexAsync<Log>(x => x.DateTime).ConfigureAwait(false);
+
+        //await DatabaseLogs.CreateIndexAsync<Log>(x => new { x.ClientIp, x.DateTime }).ConfigureAwait(false);
+
         await DatabaseLogs.CreateIndexAsync<Log>(x => x.Raw).ConfigureAwait(false);
     }
 

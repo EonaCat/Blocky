@@ -145,7 +145,9 @@ public class EonaCatDns : IDisposable
 
     private static void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
     {
+#if DEBUG
         Debug.WriteLine(e.Exception.FormatExceptionToMessage(), ELogType.ERROR, false);
+#endif
     }
 
     private static async void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

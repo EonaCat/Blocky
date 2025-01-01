@@ -314,7 +314,7 @@ namespace EonaCat.Dns.Core.Helpers
                     Class = question.Class,
                     TimeCreated = question.TimeCreated,
                     Name = question.Name,
-                    Ttl = TimeSpan.MaxValue,
+                    Ttl = TimeSpan.Zero,
                     Type = question.Type
                 });
 

@@ -100,7 +100,6 @@ public class ApiController : ApiControllerBase
             {
                 domain.ListType = ListType.Allowed;
                 await DatabaseManager.Domains.InsertOrUpdateAsync(domain).ConfigureAwait(false);
-                BlockList.RemoveFromCache(domain.Url);
             }
 
             await jsonWriter.WriteEndObjectAsync().ConfigureAwait(false);
@@ -252,7 +251,6 @@ public class ApiController : ApiControllerBase
             {
                 domain.ListType = ListType.Default;
                 await DatabaseManager.Domains.InsertOrUpdateAsync(domain).ConfigureAwait(false);
-                BlockList.RemoveFromCache(domain.Url);
             }
 
             await jsonWriter.WriteEndObjectAsync().ConfigureAwait(false);
