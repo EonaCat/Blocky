@@ -13,7 +13,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License
-
 */
 
 using System;
@@ -40,28 +39,27 @@ namespace EonaCat.Dns
     {
         private readonly ConcurrentQueue<BlockListItem> _blockListUpdateQueue = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
-        private readonly SemaphoreSlim _queueLock = new(1, 1);
-
         private EonaCatTimer _updateDataTimer;
 
         public Blocker()
         {
             BindEvents();
-            Task.Run(ProcessBlockListQueueAsync, _cancellationTokenSource.Token);
+            _ = Task.Run(ProcessBlockListQueueAsync, _cancellationTokenSource.Token);
         }
 
         internal static BlockedSetup Setup { get; set; }
         public static bool UpdateBlockList { get; internal set; }
         public static bool UpdateSetup { get; internal set; }
         public bool IsDisposed { get; private set; }
-        public static int TotalBlocked { get; private set; }
-        public static int TotalAllowed { get; private set; }
+        public static long TotalBlocked { get; private set; }
+        public static long TotalAllowed { get; private set; }
 
         public static ConcurrentBag<TaskItem> RunningBlockerTasks { get; } = new();
-
         public static bool ProgressToConsole { get; set; }
-
         public static HashSet<string> AllowList { get; private set; }
+
+        public static event EventHandler OnUpdateSetup;
+        public static event EventHandler OnBlockListCountRetrieved;
 
         public void Dispose()
         {
@@ -84,9 +82,6 @@ namespace EonaCat.Dns
             await GetBlockListCountFromDatabaseAsync().ConfigureAwait(false);
         }
 
-        public static event EventHandler OnUpdateSetup;
-        public static event EventHandler OnBlockListCountRetrieved;
-
         private async Task ProcessBlockListQueueAsync()
         {
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
@@ -108,17 +103,14 @@ namespace EonaCat.Dns
         private static async Task ProcessBlockListFromQueueAsync(IEnumerable<Uri> blockedEntries, string address)
         {
             address ??= ConstantsDns.DefaultRedirectionAddress;
-
             var blockListsFolder = Path.Combine(DllInfo.ConfigFolder, "blocklists");
             Directory.CreateDirectory(blockListsFolder);
 
             AllowList ??= await DatabaseManager.GetAllowedDomainsAsync().ConfigureAwait(false);
 
-            var entries = blockedEntries.ToArray();
-            var tasks = entries.Select(entry => ProcessBlockListEntryAsync(entry, address, blockListsFolder));
+            var tasks = blockedEntries.Select(entry => ProcessBlockListEntryAsync(entry, address, blockListsFolder));
 
-            await Logger.LogAsync($"Added {entries.Length} Blocked urls for downloading", ELogType.DEBUG).ConfigureAwait(false);
-
+            await Logger.LogAsync($"Added {blockedEntries.Count()} Blocked urls for downloading", ELogType.DEBUG).ConfigureAwait(false);
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
@@ -127,43 +119,54 @@ namespace EonaCat.Dns
             try
             {
                 var currentBlockList = await DatabaseManager.BlockLists
-                                            .FirstOrDefaultAsync(x => x.Url == entryUrl.AbsoluteUri)
-                                            .ConfigureAwait(false) ??
-                                        new BlockList
-                                        {
-                                            CreationDate = DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                                            IsEnabled = true,
-                                            Name = entryUrl.AbsoluteUri,
-                                            Url = entryUrl.AbsoluteUri
-                                        };
+                    .FirstOrDefaultAsync(x => x.Url == entryUrl.AbsoluteUri)
+                    .ConfigureAwait(false) ?? new BlockList
+                    {
+                        CreationDate = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture),
+                        IsEnabled = true,
+                        Name = entryUrl.AbsoluteUri,
+                        Url = entryUrl.AbsoluteUri
+                    };
 
-                if (!currentBlockList.IsEnabled || DateTime.TryParse(currentBlockList.LastUpdated, out var dateTime) && dateTime > DateTime.Now.AddMinutes(-10))
+                if (!currentBlockList.IsEnabled)
                 {
-                    await Logger.LogAsync(currentBlockList.IsEnabled
-                            ? $"Current blockList '{currentBlockList.Name}' was already updated in the last 10 minutes"
-                            : $"Current blockList '{currentBlockList.Name}' is not enabled", ELogType.WARNING).ConfigureAwait(false);
+                    await Logger.LogAsync($"BlockList '{currentBlockList.Name}' is not enabled", ELogType.WARNING)
+                        .ConfigureAwait(false);
                     return;
                 }
 
-                await Logger.LogAsync($"Generating download task for {entryUrl.AbsoluteUri}", ELogType.DEBUG).ConfigureAwait(false);
+                if (IsRecentlyUpdated(currentBlockList))
+                {
+                    await Logger.LogAsync($"BlockList '{currentBlockList.Name}' was updated in the last 10 minutes", ELogType.WARNING)
+                        .ConfigureAwait(false);
+                    return;
+                }
 
-                var task = new BlockListDownloadTask();
+                var downloadTask = new BlockListDownloadTask();
                 var taskItem = new TaskItem
                 {
                     Uri = entryUrl,
-                    Task = TaskHelper.Create(() => task.GenerateDownloadTaskAsync(blockListsFolder, currentBlockList, ProgressToConsole))
+                    Task = TaskHelper.Create(() => downloadTask.GenerateDownloadTaskAsync(blockListsFolder, currentBlockList, ProgressToConsole))
                 };
 
-                // Start the task
                 RunningBlockerTasks.Add(taskItem);
-                await Logger.LogAsync($"Generated download task for {entryUrl.AbsoluteUri}", ELogType.DEBUG)
-                    .ConfigureAwait(false);
                 await taskItem.Task.ExecuteAsync(null).ConfigureAwait(false);
             }
-            catch (ArgumentException argumentException)
+            catch (ArgumentException ex)
             {
-                await Logger.LogAsync(argumentException.Message, ELogType.WARNING).ConfigureAwait(false);
+                await Logger.LogAsync($"Invalid argument: {ex.Message}", ELogType.WARNING).ConfigureAwait(false);
             }
+            catch (Exception ex)
+            {
+                await Logger.LogAsync($"Unexpected error processing BlockList '{entryUrl}': {ex.Message}", ELogType.ERROR).ConfigureAwait(false);
+            }
+        }
+
+
+        private static bool IsRecentlyUpdated(BlockList blockList)
+        {
+            return DateTime.TryParse(blockList.LastUpdated, out var lastUpdated) &&
+                   lastUpdated > DateTime.Now.AddMinutes(-10);
         }
 
         public Task UpdateBlockedEntriesAsync(IEnumerable<BlockListItem> blockListItems)
@@ -176,116 +179,89 @@ namespace EonaCat.Dns
         }
 
         internal static double GetProgress(int currentItem, int totalItems)
-        {
-            return (100.0 * currentItem / totalItems).RoundToDecimalPlaces(2);
-        }
+            => (100.0 * currentItem / totalItems).RoundToDecimalPlaces(2);
 
         public async Task InitialiseAsync(bool autoUpdate = false)
         {
             _updateDataTimer = new EonaCatTimer(TimeSpan.FromSeconds(5), TimerCallback);
             _updateDataTimer.Start();
 
-            EnableAutomaticUpdates(autoUpdate);
+            if (autoUpdate)
+            {
+                EnableAutomaticUpdates();
+            }
+
             await GetBlockListCountFromDatabaseAsync().ConfigureAwait(false);
             await WriteDefaultAllowListAsync().ConfigureAwait(false);
         }
 
-
-        private static void EnableAutomaticUpdates(bool autoUpdate)
+        private static void EnableAutomaticUpdates()
         {
-            if (!autoUpdate)
-            {
-                return;
-            }
-
             var now = DateTime.Now;
-            var next4Am = now.Date.AddHours(4);
+            var next4Am = now.Date.AddHours(4).AddDays(now >= now.Date.AddHours(4) ? 1 : 0);
 
-            if (now >= next4Am)
-            {
-                next4Am = next4Am.AddDays(1);
-            }
-
-            var timeRemaining = next4Am - now;
-            var timer = new Timer(async _ => await StartAutomaticUpdate(now).ConfigureAwait(false), null,
-                timeRemaining, TimeSpan.FromHours(24));
+            new Timer(async _ => await StartAutomaticUpdate().ConfigureAwait(false),
+                null, next4Am - now, TimeSpan.FromHours(24));
         }
 
-        private static async Task StartAutomaticUpdate(DateTime currentDateTime)
+        private static async Task StartAutomaticUpdate()
         {
             UpdateBlockList = true;
-            await Logger.LogAsync($"Automatic blockList updates started at: {currentDateTime.ToLocalTime()}")
-                .ConfigureAwait(false);
+            await Logger.LogAsync("Automatic blockList updates started").ConfigureAwait(false);
         }
 
         private async void TimerCallback()
         {
-            if (UpdateBlockList || UpdateSetup)
+            if (UpdateBlockList)
             {
-                if (UpdateBlockList)
-                {
-                    UpdateBlockList = false;
-                    await ReloadBlockedEntriesAsync().ConfigureAwait(false);
-                }
+                UpdateBlockList = false;
+                await ReloadBlockedEntriesAsync().ConfigureAwait(false);
+            }
 
-                if (UpdateSetup)
-                {
-                    UpdateSetup = false;
-                    OnUpdateSetup?.Invoke(null, null!);
-                }
+            if (UpdateSetup)
+            {
+                UpdateSetup = false;
+                OnUpdateSetup?.Invoke(null, EventArgs.Empty);
             }
         }
 
         internal static async Task WriteDefaultAllowListAsync()
         {
-            await Logger.LogAsync("Adding domains to allow").ConfigureAwait(false);
-
             var allowedDomains = await DatabaseManager.GetAllowedDomainsAsync().ConfigureAwait(false);
 
             if (!allowedDomains.Any())
             {
-                // Add defaults to allowList
                 allowedDomains.Add("pool.ntp.org");
                 allowedDomains.Add("windowsupdate.com");
             }
 
-            await DatabaseManager.Domains.BulkInsertOrUpdateAsync(allowedDomains.Select(domain =>
-                new Domain { Url = domain, ForwardIp = domain, ListType = ListType.Allowed })).ConfigureAwait(false);
-            await Logger.LogAsync("Domains to allow added").ConfigureAwait(false);
+            await DatabaseManager.Domains.BulkInsertOrUpdateAsync(allowedDomains
+                .Select(domain => new Domain { Url = domain, ForwardIp = domain, ListType = ListType.Allowed }))
+                .ConfigureAwait(false);
         }
 
         public static async Task GetBlockListCountFromDatabaseAsync()
         {
             TotalAllowed = await DatabaseManager.GetAllowedDomainsCountAsync().ConfigureAwait(false);
             TotalBlocked = await DatabaseManager.GetBlockedDomainsCountAsync().ConfigureAwait(false);
-            OnBlockListCountRetrieved?.Invoke(null, null!);
+            OnBlockListCountRetrieved?.Invoke(null, EventArgs.Empty);
         }
 
         private static async Task GetBlockedSetupAsync()
         {
-            var blockedAddressSetting =
-                await DatabaseManager.GetSettingAsync(SettingName.Blockedaddress).ConfigureAwait(false);
-            var address = string.Empty;
-            var blockList =
-                (await DatabaseManager.BlockLists.GetAll().Where(x => x.IsEnabled).ToArrayAsync().ConfigureAwait(false))
-                .ToHashSet();
+            var blockedAddressSetting = await DatabaseManager.GetSettingAsync(SettingName.Blockedaddress).ConfigureAwait(false);
+            var blockList = (await DatabaseManager.BlockLists.GetAll().Where(x => x.IsEnabled).ToArrayAsync().ConfigureAwait(false)).ToHashSet();
 
-            if (!string.IsNullOrEmpty(blockedAddressSetting.Value))
-            {
-                address = blockedAddressSetting.Value;
-            }
-
-            if (blockList.Count > 0)
-            {
-                Setup = new BlockedSetup { Urls = blockList, RedirectionAddress = address };
-            }
+            Setup = blockList.Any()
+                ? new BlockedSetup { Urls = blockList, RedirectionAddress = blockedAddressSetting?.Value ?? string.Empty }
+                : null;
         }
 
         private async Task ReloadBlockedEntriesAsync()
         {
             await GetBlockedSetupAsync().ConfigureAwait(false);
 
-            if (Setup != null && Setup.Urls.Any())
+            if (Setup?.Urls?.Any() == true)
             {
                 var blockedEntries = Setup.Urls.Where(x => x.IsEnabled).Select(x => new Uri(x.Url)).ToList();
                 Setup.Urls.Clear();
@@ -302,12 +278,8 @@ namespace EonaCat.Dns
 
         private void Dispose(bool disposing)
         {
-            if (IsDisposed)
-            {
-                return;
-            }
+            if (IsDisposed) return;
 
-            // Dispose managed resources
             if (disposing)
             {
                 _cancellationTokenSource.Cancel();
@@ -315,7 +287,6 @@ namespace EonaCat.Dns
                 _updateDataTimer?.Stop();
             }
 
-            // Dispose unmanaged resources
             IsDisposed = true;
         }
     }

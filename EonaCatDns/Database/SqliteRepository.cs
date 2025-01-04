@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using EonaCat.Dns.Database.Models.Entities;
 using EonaCat.Dns.Database.Models.Interfaces;
+using EonaCat.Dns.Extensions;
 using EonaCat.Dns.Models;
+using EonaCat.Logger;
 using SQLite;
 
 namespace EonaCat.Dns.Database;
@@ -12,7 +16,7 @@ namespace EonaCat.Dns.Database;
 internal class SqliteRepository<T> where T : IEntity, new()
 {
     private readonly SQLiteAsyncConnection _database;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly SemaphoreSlim _semaphore = new(1, 1);  // Ensures serialized writes
 
     internal SqliteRepository(SQLiteAsyncConnection database)
     {
@@ -60,59 +64,23 @@ internal class SqliteRepository<T> where T : IEntity, new()
     internal Task<int> DeleteAsync(T entity)
         => _database.DeleteAsync(entity);
 
-    internal async Task<IEnumerable<T>> BulkInsertOrUpdateAsync(IEnumerable<T> entities)
-    {
-        if (entities == null) throw new ArgumentNullException(nameof(entities));
-
-        await _semaphore.WaitAsync();
-        try
-        {
-            await _database.RunInTransactionAsync(conn =>
-            {
-                foreach (var entity in entities)
-                {
-                    InsertOrUpdate(conn, entity);
-                    OnEntityInsertedOrUpdated?.Invoke(this, entity);
-                }
-            }).ConfigureAwait(false);
-
-            return entities;
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-    }
-
-    private void InsertOrUpdate(SQLiteConnection conn, T entity)
-    {
-        if (entity.Id > 0)
-        {
-            conn.Update(entity);
-        }
-        else
-        {
-            conn.InsertOrReplace(entity);
-            entity.Id = conn.ExecuteScalar<long>("SELECT last_insert_rowid()");
-        }
-    }
-
     internal async Task<T> InsertOrUpdateAsync(T entity)
     {
         if (entity == null) throw new ArgumentNullException(nameof(entity));
 
+        // Ensure serialized access to the database
         await _semaphore.WaitAsync();
         try
         {
             if (entity.Id > 0)
             {
-                await _database.UpdateAsync(entity).ConfigureAwait(false);
+                await _database.UpdateAsync(entity).ConfigureAwait(false);  // Update if entity exists
             }
             else
             {
-                await _database.InsertAsync(entity).ConfigureAwait(false);
+                await _database.InsertAsync(entity).ConfigureAwait(false);  // Insert if new
                 entity.Id = await _database.ExecuteScalarAsync<long>("SELECT last_insert_rowid()")
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false);  // Get the last inserted ID
             }
 
             OnEntityInsertedOrUpdated?.Invoke(this, entity);
@@ -120,7 +88,7 @@ internal class SqliteRepository<T> where T : IEntity, new()
         }
         finally
         {
-            _semaphore.Release();
+            _semaphore.Release();  // Release the semaphore
         }
     }
 
@@ -159,5 +127,16 @@ internal class SqliteRepository<T> where T : IEntity, new()
         query += $" GROUP BY {column} ORDER BY {orderBy}";
 
         return _database.QueryAsync<TopRecordType>(query, dateTimeStart);
+    }
+
+    internal async Task<long> BulkInsertOrUpdateAsync(IEnumerable<T> list)
+    {
+        List<T> entities = new List<T>();
+        foreach (var entity in list)
+        {
+            var result = await InsertOrUpdateAsync(entity).ConfigureAwait(false);
+            entities.Add(result);
+        }
+        return entities.Count;
     }
 }
