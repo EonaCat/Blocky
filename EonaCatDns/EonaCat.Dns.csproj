@@ -8,7 +8,7 @@
     <LangVersion>Latest</LangVersion>
     <AssemblyVersion>4.2.0</AssemblyVersion>
     <StartupObject />
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Authors>EonaCat (Jeroen Saey)</Authors>
     <Description>This is a Dns Server</Description>
     <Copyright>EonaCat (Jeroen Saey)</Copyright>
@@ -36,6 +36,7 @@
 		<EVVcs>git</EVVcs>
 		<EVCheckAllAttributes>true</EVCheckAllAttributes>
 		<EVShowRevision>true</EVShowRevision>
+		<Version>4.2.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

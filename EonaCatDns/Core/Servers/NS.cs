@@ -42,7 +42,7 @@ namespace EonaCat.Dns.Core.Servers
 
         private void CleanExpiredRecords()
         {
-            if (IsCacheDisabled)
+            if (IsCacheDisabled || Server.WatchMode)
                 return;
 
             foreach (var (question, resourceRecords) in _cache.ToArray())
@@ -97,7 +97,7 @@ namespace EonaCat.Dns.Core.Servers
 
         private bool TryGetAnswerFromCache(string question, out List<ResourceRecord> cachedRecords)
         {
-            if (IsCacheDisabled)
+            if (IsCacheDisabled || Server.WatchMode)
             {
                 cachedRecords = new List<ResourceRecord>();
                 return false;
@@ -108,7 +108,7 @@ namespace EonaCat.Dns.Core.Servers
 
         protected internal void CacheAnswer(string question, List<ResourceRecord> records)
         {
-            if (IsCacheDisabled)
+            if (IsCacheDisabled || Server.WatchMode)
                 return;
 
             _cache[question] = records;

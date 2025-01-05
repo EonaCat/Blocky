@@ -48,6 +48,7 @@
 		<EVVcs>git</EVVcs>
 		<EVCheckAllAttributes>true</EVCheckAllAttributes>
 		<EVShowRevision>true</EVShowRevision>
+		<Version>4.2.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

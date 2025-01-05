@@ -35,23 +35,21 @@ internal class DnsClient : DnsClientBase
     private const int DnsPort = 53;
 
     private readonly UdpClient _udpClient = new();
-    private readonly ConcurrentDictionary<IPAddress, TcpClient> _tcpClients = new();
-    private Lazy<IEnumerable<IPAddress>> LazyServers = new(GetServers);
+    private readonly ConcurrentDictionary<IPAddress, Lazy<TcpClient>> _tcpClients = new();
+    private Lazy<List<IPAddress>> LazyServers = new(GetServers);
 
     public IEnumerable<IPAddress> Servers
     {
         get => LazyServers.Value;
-        set
-        {
-            LazyServers = new(() => value);
-        }
+        set => LazyServers = new(() => value.ToList());
     }
 
     public override async Task<Message> QueryAsync(Message request, CancellationToken cancel = default)
     {
-        var localDnsServers = Servers.Where(a =>
-            (Socket.OSSupportsIPv4 && a.AddressFamily == AddressFamily.InterNetwork) ||
-            (Socket.OSSupportsIPv6 && a.AddressFamily == AddressFamily.InterNetworkV6)).ToArray();
+        var localDnsServers = Servers
+            .Where(a => (Socket.OSSupportsIPv4 && a.AddressFamily == AddressFamily.InterNetwork) ||
+                        (Socket.OSSupportsIPv6 && a.AddressFamily == AddressFamily.InterNetworkV6))
+            .ToArray();
 
         if (localDnsServers.Length == 0)
         {
@@ -68,7 +66,11 @@ internal class DnsClient : DnsClientBase
 
     private async Task<Message> GetResponseFromDnsAsync(Message request, IEnumerable<IPAddress> localDnsServers, CancellationToken cancel)
     {
-        var tasks = localDnsServers.Select(async server =>
+        // Split servers by address family for parallelism
+        var ipv4Servers = localDnsServers.Where(x => x.AddressFamily == AddressFamily.InterNetwork);
+        var ipv6Servers = localDnsServers.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+
+        var tasks = ipv4Servers.Concat(ipv6Servers).Select(async server =>
         {
             try
             {
@@ -137,11 +139,11 @@ internal class DnsClient : DnsClientBase
     {
         try
         {
-            if (!_tcpClients.TryGetValue(server, out var tcpClient) || !tcpClient.Connected)
-            {
-                tcpClient = new TcpClient();
-                _tcpClients[server] = tcpClient;
+            var tcpClientLazy = _tcpClients.GetOrAdd(server, s => new Lazy<TcpClient>(() => new TcpClient(s.AddressFamily)));
+            var tcpClient = tcpClientLazy.Value;
 
+            if (!tcpClient.Connected)
+            {
                 await Logger.LogAsync($"Establishing TCP connection to {server}", ELogType.DEBUG, false).ConfigureAwait(false);
                 await tcpClient.ConnectAsync(server, DnsPort, cancel).ConfigureAwait(false);
             }
@@ -151,9 +153,7 @@ internal class DnsClient : DnsClientBase
             var lengthPrefix = BitConverter.GetBytes((ushort)requestBytes.Length);
 
             if (BitConverter.IsLittleEndian)
-            {
                 Array.Reverse(lengthPrefix);
-            }
 
             await Logger.LogAsync($"Sending TCP query to {server}", ELogType.DEBUG, false).ConfigureAwait(false);
             await stream.WriteAsync(lengthPrefix, cancel).ConfigureAwait(false);
@@ -164,9 +164,7 @@ internal class DnsClient : DnsClientBase
             await stream.ReadAsync(lengthBuffer, cancel).ConfigureAwait(false);
 
             if (BitConverter.IsLittleEndian)
-            {
                 Array.Reverse(lengthBuffer);
-            }
 
             var responseLength = BinaryPrimitives.ReadUInt16BigEndian(lengthBuffer);
             var responseBuffer = new byte[responseLength];
@@ -199,7 +197,7 @@ internal class DnsClient : DnsClientBase
         {
             _udpClient.Dispose();
 
-            foreach (var client in _tcpClients.Values)
+            foreach (var client in _tcpClients.Values.Select(lazy => lazy.Value))
             {
                 client.Close();
                 client.Dispose();

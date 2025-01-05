@@ -86,7 +86,7 @@ namespace EonaCat.Dns.Core.Helpers
 
             var isBlocked = blockingTasks.Any(b => b);
 
-            if (isBlocked)
+            if (isBlocked && !Server.WatchMode)
             {
                 message.IsBlocked = true;
                 await UpdateStatsForQueryAsync(message, remote, question.Name.ToString(), databaseClient)

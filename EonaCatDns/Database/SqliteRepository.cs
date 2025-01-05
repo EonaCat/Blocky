@@ -129,14 +129,48 @@ internal class SqliteRepository<T> where T : IEntity, new()
         return _database.QueryAsync<TopRecordType>(query, dateTimeStart);
     }
 
-    internal async Task<long> BulkInsertOrUpdateAsync(IEnumerable<T> list)
+    internal async Task<long> BulkInsertOrUpdateAsync(IEnumerable<T> entities)
     {
-        List<T> entities = new List<T>();
-        foreach (var entity in list)
+        if (entities == null) throw new ArgumentNullException(nameof(entities));
+        long insertedCount = 0;
+
+        // Ensure serialized access to the database
+        await _semaphore.WaitAsync();
+        try
         {
-            var result = await InsertOrUpdateAsync(entity).ConfigureAwait(false);
-            entities.Add(result);
+            // Access the underlying SQLiteConnection and execute a transaction
+            await Task.Run(() =>
+            {
+                var connection = _database.GetConnection();
+                connection.RunInTransaction(() =>
+                {
+                    foreach (var entity in entities)
+                    {
+                        if (entity.Id > 0)
+                        {
+                            // Update existing entity
+                            connection.Update(entity);
+                        }
+                        else
+                        {
+                            // Insert new entity
+                            connection.Insert(entity);
+                            entity.Id = connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
+                        }
+
+                        insertedCount++;
+                        OnEntityInsertedOrUpdated?.Invoke(this, entity);
+                    }
+                });
+            }).ConfigureAwait(false);
         }
-        return entities.Count;
+        finally
+        {
+            _semaphore.Release(); // Release the semaphore
+        }
+
+        return insertedCount;
     }
+
+
 }
