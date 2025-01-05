@@ -6,7 +6,7 @@
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>Latest</LangVersion>
-    <AssemblyVersion>4.2.0</AssemblyVersion>
+    <AssemblyVersion>4.2.1</AssemblyVersion>
     <StartupObject />
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Authors>EonaCat (Jeroen Saey)</Authors>
@@ -28,7 +28,7 @@
   </PropertyGroup>
 
 	<PropertyGroup>
-		<EVRevisionFormat>4.2.0+{chash:10}.{c:ymd}</EVRevisionFormat>
+		<EVRevisionFormat>4.2.1+{chash:10}.{c:ymd}</EVRevisionFormat>
 		<EVDefault>true</EVDefault>
 		<EVInfo>true</EVInfo>
 		<EVTagMatch>v[0-9]*</EVTagMatch>
@@ -36,7 +36,7 @@
 		<EVVcs>git</EVVcs>
 		<EVCheckAllAttributes>true</EVCheckAllAttributes>
 		<EVShowRevision>true</EVShowRevision>
-		<Version>4.2.0</Version>
+		<Version>4.2.1</Version>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

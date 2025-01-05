@@ -57,14 +57,23 @@ namespace EonaCat.Dns.Core.Servers
         public async Task<Message> QueryAsync(Message request, CancellationToken cancel = default)
         {
             var response = request.CreateResponse();
-            var tasks = request.Questions.Select(question => QueryQuestionAsync(question, response, cancel));
-            await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            // Ensure DNS queries take priority
+            var dnsTasks = request.Questions.Select(question => QueryQuestionAsync(question, response, cancel));
+
+            // Proceed with DNS query handling asynchronously
+            await Task.WhenAll(dnsTasks).ConfigureAwait(false);
 
             if (response.Answers.Count > 0)
                 response.Header.ResponseCode = ResponseCode.NoError;
 
+            // Add additional records asynchronously
             await AddAdditionalRecordsAsync(response).ConfigureAwait(false);
-            return await AddSecurityExtensionsAsync(request, response).ConfigureAwait(false);
+
+            // Ensure DNS queries finish before updating blocklist
+            await AddSecurityExtensionsAsync(request, response).ConfigureAwait(false);
+
+            return response;
         }
 
         private async Task QueryQuestionAsync(Question question, Message response, CancellationToken cancel)

@@ -1,21 +1,4 @@
-﻿/*
-EonaCatDns
-Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License
-*/
-
-using EonaCat.Dns.Core.Clients;
+﻿using EonaCat.Dns.Core.Clients;
 using EonaCat.Logger;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
@@ -46,6 +29,7 @@ internal class DnsClient : DnsClientBase
 
     public override async Task<Message> QueryAsync(Message request, CancellationToken cancel = default)
     {
+        // Filter servers based on OS support for IP families
         var localDnsServers = Servers
             .Where(a => (Socket.OSSupportsIPv4 && a.AddressFamily == AddressFamily.InterNetwork) ||
                         (Socket.OSSupportsIPv6 && a.AddressFamily == AddressFamily.InterNetworkV6))
@@ -66,33 +50,39 @@ internal class DnsClient : DnsClientBase
 
     private async Task<Message> GetResponseFromDnsAsync(Message request, IEnumerable<IPAddress> localDnsServers, CancellationToken cancel)
     {
-        // Split servers by address family for parallelism
+        // Split servers by address family for parallelism (IPv4 and IPv6)
         var ipv4Servers = localDnsServers.Where(x => x.AddressFamily == AddressFamily.InterNetwork);
         var ipv6Servers = localDnsServers.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
 
-        var tasks = ipv4Servers.Concat(ipv6Servers).Select(async server =>
+        // Create tasks to handle querying multiple servers in parallel
+        var tasks = ipv4Servers/*.Concat(ipv6Servers)*/.Select(server => QueryServerAsync(request, server, cancel));
+
+        // Use `Task.WhenAny` to return the first valid response (faster response handling)
+        var completedTask = await Task.WhenAny(tasks).ConfigureAwait(false);
+        var response = await completedTask.ConfigureAwait(false);
+
+        return response?.HasAnswers == true ? response : null;
+    }
+
+    private async Task<Message> QueryServerAsync(Message request, IPAddress server, CancellationToken cancel)
+    {
+        try
         {
-            try
+            await Logger.LogAsync($"Querying server: {server}", ELogType.DEBUG, false).ConfigureAwait(false);
+            var response = await QueryAsync(request, server, cancel).ConfigureAwait(false);
+
+            if (response?.HasAnswers == true)
             {
-                await Logger.LogAsync($"Querying server: {server}", ELogType.DEBUG, false).ConfigureAwait(false);
-                var response = await QueryAsync(request, server, cancel).ConfigureAwait(false);
-
-                if (response?.HasAnswers == true)
-                {
-                    await Logger.LogAsync($"Successful response from server: {server}", ELogType.INFO, false).ConfigureAwait(false);
-                }
-
-                return response;
+                await Logger.LogAsync($"Successful response from server: {server}", ELogType.INFO, false).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                await Logger.LogAsync(ex, $"Error querying server: {server}", false).ConfigureAwait(false);
-                return null;
-            }
-        });
 
-        var responses = await Task.WhenAll(tasks).ConfigureAwait(false);
-        return responses.FirstOrDefault(response => response?.HasAnswers == true);
+            return response;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await Logger.LogAsync(ex, $"Error querying server: {server}", false).ConfigureAwait(false);
+            return null;
+        }
     }
 
     private async Task<Message> QueryAsync(Message request, IPAddress server, CancellationToken cancel)
@@ -139,6 +129,7 @@ internal class DnsClient : DnsClientBase
     {
         try
         {
+            // Get or create a TcpClient using lazy initialization
             var tcpClientLazy = _tcpClients.GetOrAdd(server, s => new Lazy<TcpClient>(() => new TcpClient(s.AddressFamily)));
             var tcpClient = tcpClientLazy.Value;
 
@@ -185,6 +176,7 @@ internal class DnsClient : DnsClientBase
 
     private static List<IPAddress> GetServers()
     {
+        // Optimize server retrieval by directly accessing DNS addresses
         return NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
             .SelectMany(ni => ni.GetIPProperties().DnsAddresses)

@@ -1,22 +1,16 @@
-﻿using System;
+﻿using SQLite;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading;
 using System.Threading.Tasks;
-using EonaCat.Dns.Database.Models.Entities;
-using EonaCat.Dns.Database.Models.Interfaces;
-using EonaCat.Dns.Extensions;
+using System.Threading;
+using System;
 using EonaCat.Dns.Models;
-using EonaCat.Logger;
-using SQLite;
-
-namespace EonaCat.Dns.Database;
+using EonaCat.Dns.Database.Models.Interfaces;
 
 internal class SqliteRepository<T> where T : IEntity, new()
 {
     private readonly SQLiteAsyncConnection _database;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);  // Ensures serialized writes
+    private readonly SemaphoreSlim _writeSemaphore = new(1, 1);  // Serialize writes to avoid conflicts
 
     internal SqliteRepository(SQLiteAsyncConnection database)
     {
@@ -24,6 +18,15 @@ internal class SqliteRepository<T> where T : IEntity, new()
     }
 
     public event EventHandler<T> OnEntityInsertedOrUpdated;
+
+    private AsyncTableQuery<T> Table() => _database.Table<T>();
+
+    internal Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+        => Table().FirstOrDefaultAsync(predicate);
+
+    internal AsyncTableQuery<T> GetAll() => Table();
+
+    internal Task<int> CountAllAsync() => Table().CountAsync();
 
     internal AsyncTableQuery<T> Where(Expression<Func<T, bool>> predicate) => Table().Where(predicate);
 
@@ -43,15 +46,6 @@ internal class SqliteRepository<T> where T : IEntity, new()
         return _database.ExecuteScalarAsync<long>(query);
     }
 
-    private AsyncTableQuery<T> Table() => _database.Table<T>();
-
-    internal Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
-        => Table().FirstOrDefaultAsync(predicate);
-
-    internal AsyncTableQuery<T> GetAll() => Table();
-
-    internal Task<int> CountAllAsync() => Table().CountAsync();
-
     internal Task<int> CountAllAsync(Expression<Func<T, bool>> predicate)
         => Table().CountAsync(predicate);
 
@@ -68,8 +62,8 @@ internal class SqliteRepository<T> where T : IEntity, new()
     {
         if (entity == null) throw new ArgumentNullException(nameof(entity));
 
-        // Ensure serialized access to the database
-        await _semaphore.WaitAsync();
+        // Ensure serialized access to the database (writes only)
+        await _writeSemaphore.WaitAsync();
         try
         {
             if (entity.Id > 0)
@@ -88,7 +82,7 @@ internal class SqliteRepository<T> where T : IEntity, new()
         }
         finally
         {
-            _semaphore.Release();  // Release the semaphore
+            _writeSemaphore.Release();  // Release the semaphore after the operation completes
         }
     }
 
@@ -134,8 +128,8 @@ internal class SqliteRepository<T> where T : IEntity, new()
         if (entities == null) throw new ArgumentNullException(nameof(entities));
         long insertedCount = 0;
 
-        // Ensure serialized access to the database
-        await _semaphore.WaitAsync();
+        // Ensure serialized access to the database (writes only)
+        await _writeSemaphore.WaitAsync();
         try
         {
             // Access the underlying SQLiteConnection and execute a transaction
@@ -166,11 +160,9 @@ internal class SqliteRepository<T> where T : IEntity, new()
         }
         finally
         {
-            _semaphore.Release(); // Release the semaphore
+            _writeSemaphore.Release(); // Release the semaphore
         }
 
         return insertedCount;
     }
-
-
 }

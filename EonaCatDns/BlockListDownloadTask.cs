@@ -72,7 +72,6 @@ namespace EonaCat.Dns
             try
             {
                 await StartUpdateBlockListToDatabase(blockList).ConfigureAwait(false);
-
                 using var fileStream = new FileStream(blockListFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
                 using var reader = new StreamReader(fileStream);
 
@@ -154,10 +153,10 @@ namespace EonaCat.Dns
                 {
                     blockList.TotalEntries = domains.Count;
                     blockList.LastUpdated = DateTime.Now.ToString(CultureInfo.InvariantCulture);
+                    await DatabaseManager.BlockLists.InsertOrUpdateAsync(blockList).ConfigureAwait(false);
 
                     await SaveDomainsToDatabase(blockList.Url, domains).ConfigureAwait(false);
                     await Blocker.GetBlockListCountFromDatabaseAsync().ConfigureAwait(false);
-
                 }
             }
             catch (Exception ex)

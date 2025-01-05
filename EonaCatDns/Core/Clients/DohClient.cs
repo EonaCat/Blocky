@@ -1,21 +1,4 @@
-﻿/*
-EonaCatDns
-Copyright (C) 2017-2025 EonaCat (Jeroen Saey)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License
-*/
-
-using EonaCat.Dns.Core.Clients.HttpResolver;
+﻿using EonaCat.Dns.Core.Clients.HttpResolver;
 using EonaCat.Dns.Core.Clients;
 using EonaCat.Logger;
 using System.Collections.Generic;
@@ -62,8 +45,7 @@ internal class DohClient : DnsClientBase
         Servers = Servers.OrderBy(_ => Random.Next()).ToList(); // Shuffle servers for random selection
         await Logger.LogAsync($"Shuffled DoH servers: {string.Join(", ", Servers)}", ELogType.DEBUG, false).ConfigureAwait(false);
 
-        var tasks = Servers.Select(server => QueryServerAsync(request, server, cancel)).ToList();
-        var responses = await Task.WhenAll(tasks).ConfigureAwait(false);
+        var responses = await QueryServersAsync(request, cancel);
 
         var fastestResponse = responses.FirstOrDefault(response => response != null && response.HasAnswerRecords);
         if (fastestResponse != null)
@@ -76,6 +58,34 @@ internal class DohClient : DnsClientBase
         }
 
         return fastestResponse;
+    }
+
+    private async Task<List<Message>> QueryServersAsync(Message request, CancellationToken cancel)
+    {
+        var tasks = Servers.Select(server => QueryServerAsync(request, server, cancel)).ToList();
+        var responses = new List<Message>();
+
+        foreach (var task in tasks)
+        {
+            try
+            {
+                var response = await task.ConfigureAwait(false);
+                if (response != null)
+                {
+                    responses.Add(response);
+                    if (response.HasAnswerRecords)
+                    {
+                        break; // Stop once we have a valid response
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await Logger.LogAsync(ex, "Error querying DoH server", false).ConfigureAwait(false);
+            }
+        }
+
+        return responses;
     }
 
     private async Task<Message> QueryServerAsync(Message request, string server, CancellationToken cancel)
@@ -129,7 +139,7 @@ internal class DohClient : DnsClientBase
 
             if (httpResponse.Content.Headers.ContentType?.MediaType != DnsWireFormat)
             {
-                throw new HttpRequestException($"Expected content-type '{DnsWireFormat}', but got '{httpResponse.Content.Headers.ContentType?.MediaType}'.");
+                throw new HttpRequestException($"Expected content-type '{DnsWireFormat}', but got '{httpResponse.Content.Headers.ContentType?.MediaType}'");
             }
 
             await Logger.LogAsync($"Processing DoH response for '{question.Name}' ('{question.Type}') from '{server}'", ELogType.DEBUG, false).ConfigureAwait(false);

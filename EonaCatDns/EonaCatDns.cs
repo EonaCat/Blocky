@@ -291,8 +291,11 @@ public class EonaCatDns : IDisposable
         await InitialiseAsync().ConfigureAwait(false);
         await InternalDnsServer.StartAsync().ConfigureAwait(false);
 
-        // Initialise the blocker
-        await _blocker.InitialiseAsync(_config.AutoUpdate).ConfigureAwait(false);
+        _ = Task.Run(async () =>
+        {
+            // Initialise the blocker
+            await _blocker.InitialiseAsync(_config.AutoUpdate).ConfigureAwait(false);
+        });
     }
 
     /// <summary>

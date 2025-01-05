@@ -140,6 +140,7 @@ namespace EonaCat.Dns.Core.Helpers
                                 if (message != null && message.HasAnswers)
                                 {
                                     _nameServer.CacheAnswer(question.ToString(), message.Answers);
+                                    await SendToClientAsync(message, remote).ConfigureAwait(false);
                                 }
                             }
                         }

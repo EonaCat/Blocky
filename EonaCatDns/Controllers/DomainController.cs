@@ -224,7 +224,7 @@ public class DomainController : ControllerBase
             return RedirectToAction("Index");
         }
 
-        Blocker.UpdateBlockList = true;
+        Blocker.UpdateTheBlockList = true;
         return RedirectToAction("Index");
     }
 
